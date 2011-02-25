@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-public class InputDispatch : MonoBehaviour {
+public class KeyDispatch : MonoBehaviour {
     public KeyCode[] keys;
 
 	// Use this for initialization

@@ -24,6 +24,9 @@ public class Scheduler : MonoBehaviour {
                 next = i;
             }
         }
+        if (next < 0) {
+            enabled = false;
+        }
 	}
 	
 	// Update is called once per frame

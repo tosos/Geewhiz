@@ -26,7 +26,6 @@ public class Dispatcher : MonoBehaviour {
     }
 
     public void Dispatch (string message, object parameter) {
-        Debug.Log ("dispatching " + message);
         if (serialRecv.ContainsKey (message)) {
             serialRecv[message].Peek().SendMessage (message, parameter);
         }
