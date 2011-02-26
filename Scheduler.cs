@@ -17,7 +17,6 @@ public class Scheduler : MonoBehaviour {
     public TimerMessage[] messages;
     private List<TimerMessage> priorityQueue;
 
-
     static private Scheduler instance = null;
     static public Scheduler GetInstance () {
         if (instance == null) {
@@ -68,10 +67,12 @@ public class Scheduler : MonoBehaviour {
             for (int i = 1; i < priorityQueue.Count; i ++) {
                 if (priorityQueue[i].message == message && 
                         (obj == null || priorityQueue[i].gameObject == obj)) {
+
                     int last = priorityQueue.Count - 1;
                     priorityQueue[i] = priorityQueue[last];
                     priorityQueue.RemoveAt (last);
                     BubbleDown (i);
+
                     continueLoop = true;
                     break;
                 }
@@ -84,14 +85,12 @@ public class Scheduler : MonoBehaviour {
 
     void Update () {
         if (Time.time > priorityQueue[1].nextTime) {
-            if (priorityQueue[1].gameObject) {
-                priorityQueue[1].gameObject.SendMessage (priorityQueue[1].message, 
-                                                         priorityQueue[1].secondsBetween);
-            } else {
-                Dispatcher.GetInstance ().Dispatch (priorityQueue[1].message, 
-                                                    priorityQueue[1].secondsBetween);
-            }
+            // store these off so we can move the top level or remove it
+            GameObject obj = priorityQueue[1].gameObject;
+            string message = priorityQueue[1].message;
+            float secondsBetween = priorityQueue[1].secondsBetween; 
 
+            // move it before we call the message in case the message modifies the queue
             if (priorityQueue[1].secondsBetween > 0) {
                 priorityQueue[1].nextTime = Time.time + priorityQueue[1].secondsBetween;
                 BubbleDown (1);
@@ -101,6 +100,13 @@ public class Scheduler : MonoBehaviour {
                 priorityQueue.RemoveAt (last);
                 BubbleDown (1);
             }
+
+            if (obj) {
+                obj.SendMessage (message, secondsBetween);
+            } else {
+                Dispatcher.GetInstance ().Dispatch (message, secondsBetween);
+            }
+
         }
     }
 
@@ -135,6 +141,7 @@ public class Scheduler : MonoBehaviour {
                 TimerMessage tmp = priorityQueue[parent];
                 priorityQueue[parent] = priorityQueue[ind];
                 priorityQueue[ind] = tmp;
+                ind = parent;
             } else {
                 break;
             }
@@ -150,11 +157,13 @@ public class Scheduler : MonoBehaviour {
                 TimerMessage tmp = priorityQueue[left];
                 priorityQueue[left] = priorityQueue[ind];
                 priorityQueue[ind] = tmp;
+                ind = left;
             } else if (right < priorityQueue.Count && 
                     priorityQueue[right].nextTime < priorityQueue[ind].nextTime) {
                 TimerMessage tmp = priorityQueue[right];
                 priorityQueue[right] = priorityQueue[ind];
                 priorityQueue[ind] = tmp;
+                ind = right;
             } else {
                 break;
             }
