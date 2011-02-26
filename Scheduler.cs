@@ -16,24 +16,22 @@ public class Scheduler : MonoBehaviour {
 
     private int next = -1;
 
-	// Use this for initialization
-	void Start () {
+	void Awake () {
 	    for (int i = 0; i < messages.Length; i ++) {
             messages[i].nextTime = Time.time + messages[i].secondsBetween;
             if (next == -1 || messages[i].nextTime < messages[next].nextTime) {
                 next = i;
             }
         }
-        if (next < 0) {
-            enabled = false;
+        if (next >= 0) {
+            StartCoroutine (Schedule());
         }
 	}
-	
-	// Update is called once per frame
-	void Update () {
-	    if (Time.time > messages[next].nextTime) {
+    IEnumerator Schedule () {
+        while (true) {
+            yield return new WaitForSeconds(messages[next].nextTime - Time.time);
             Dispatcher.GetInstance ().Dispatch (messages[next].message, 
-                                                messages[next].secondsBetween);
+                                            messages[next].secondsBetween);
             messages[next].nextTime = Time.time + messages[next].secondsBetween;
 	        for (int i = 0; i < messages.Length; i ++) {
                 if (messages[i].nextTime < messages[next].nextTime) {
@@ -41,5 +39,5 @@ public class Scheduler : MonoBehaviour {
                 }
             }
         }
-	}
+    }
 }
