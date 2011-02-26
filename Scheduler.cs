@@ -17,7 +17,20 @@ public class Scheduler : MonoBehaviour {
     public TimerMessage[] messages;
     private List<TimerMessage> priorityQueue;
 
+
+    static private Scheduler instance = null;
+    static public Scheduler GetInstance () {
+        if (instance == null) {
+            instance = (Scheduler) FindObjectOfType (typeof(Scheduler));
+        }
+        return instance;
+    }
 	void Awake () {
+        if (instance != null) {
+            Destroy (instance.gameObject);
+        }
+        instance = null;
+
         priorityQueue = new List<TimerMessage> ();
         // blank initial because 0 index shouldn't be used.
         priorityQueue.Add (new TimerMessage ()); 
@@ -31,7 +44,9 @@ public class Scheduler : MonoBehaviour {
         }
 
         if (priorityQueue.Count > 1) {
-            StartCoroutine (Schedule());
+            // StartCoroutine (Schedule());
+        } else {
+            enabled = false;
         }
 	}
 
@@ -43,8 +58,53 @@ public class Scheduler : MonoBehaviour {
         msg.gameObject = obj;
         priorityQueue.Add (msg);
         BubbleUp (priorityQueue.Count - 1);
+        enabled = true;
     }
 
+    public void CancelSchedule (string message, GameObject obj = null) {
+        bool continueLoop = true;
+        while (continueLoop) {
+            continueLoop = false;
+            for (int i = 1; i < priorityQueue.Count; i ++) {
+                if (priorityQueue[i].message == message && 
+                        (obj == null || priorityQueue[i].gameObject == obj)) {
+                    int last = priorityQueue.Count - 1;
+                    priorityQueue[i] = priorityQueue[last];
+                    priorityQueue.RemoveAt (last);
+                    BubbleDown (i);
+                    continueLoop = true;
+                    break;
+                }
+            }
+        }
+        if (priorityQueue.Count <= 1) {
+            enabled = false;
+        }
+    }
+
+    void Update () {
+        if (Time.time > priorityQueue[1].nextTime) {
+            if (priorityQueue[1].gameObject) {
+                priorityQueue[1].gameObject.SendMessage (priorityQueue[1].message, 
+                                                         priorityQueue[1].secondsBetween);
+            } else {
+                Dispatcher.GetInstance ().Dispatch (priorityQueue[1].message, 
+                                                    priorityQueue[1].secondsBetween);
+            }
+
+            if (priorityQueue[1].secondsBetween > 0) {
+                priorityQueue[1].nextTime = Time.time + priorityQueue[1].secondsBetween;
+                BubbleDown (1);
+            } else {
+                int last = priorityQueue.Count - 1;
+                priorityQueue[1] = priorityQueue[last];
+                priorityQueue.RemoveAt (last);
+                BubbleDown (1);
+            }
+        }
+    }
+
+/* TODO need to be able to interrupt the WaitForSeconds when Add or Cancel is called.
     IEnumerator Schedule () {
         while (true) {
             yield return new WaitForSeconds(priorityQueue[1].nextTime - Time.time);
@@ -66,6 +126,7 @@ public class Scheduler : MonoBehaviour {
             }
         }
     }
+*/
 
     void BubbleUp (int ind) {
         while (ind > 1) {
