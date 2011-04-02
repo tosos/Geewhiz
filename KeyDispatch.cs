@@ -15,10 +15,10 @@ public class KeyDispatch : MonoBehaviour {
 	void Update () {
         foreach (KeyCode key in keys) {
             if (Input.GetKeyDown (key)) {
-                Dispatcher.GetInstance ().Dispatch ("KeyDown", key.ToString());
+                Dispatcher.GetInstance ().Dispatch ("KeyDown" + key.ToString(), "");
             }
             if (Input.GetKeyUp (key)) {
-                Dispatcher.GetInstance ().Dispatch ("KeyUp", key.ToString());
+                Dispatcher.GetInstance ().Dispatch ("KeyUp" + key.ToString(), "");
             }
         }
 	}
