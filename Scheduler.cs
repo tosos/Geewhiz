@@ -101,6 +101,10 @@ public class Scheduler : MonoBehaviour {
                 BubbleDown (1);
             }
 
+            if (priorityQueue.Count <= 1) {
+                enabled = false;
+            }
+
             if (obj) {
                 obj.SendMessage (message, secondsBetween);
             } else {
