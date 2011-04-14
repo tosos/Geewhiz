@@ -156,21 +156,29 @@ public class Scheduler : MonoBehaviour {
         while (ind < priorityQueue.Count) {
             int left = ind * 2;
             int right = ind * 2 + 1;
-            if (left < priorityQueue.Count && 
-                    priorityQueue[left].nextTime < priorityQueue[ind].nextTime) {
-                TimerMessage tmp = priorityQueue[left];
-                priorityQueue[left] = priorityQueue[ind];
+
+            if (left >= priorityQueue.Count) {
+                break;
+            }
+
+            int minInd;
+            if (right >= priorityQueue.Count || 
+                priorityQueue[left].nextTime < priorityQueue[right].nextTime) 
+            {
+                minInd = left;
+            }  else {
+                minInd = right;
+            }
+
+            if (priorityQueue[minInd].nextTime < priorityQueue[ind].nextTime) {
+                TimerMessage tmp = priorityQueue[minInd];
+                priorityQueue[minInd] = priorityQueue[ind];
                 priorityQueue[ind] = tmp;
-                ind = left;
-            } else if (right < priorityQueue.Count && 
-                    priorityQueue[right].nextTime < priorityQueue[ind].nextTime) {
-                TimerMessage tmp = priorityQueue[right];
-                priorityQueue[right] = priorityQueue[ind];
-                priorityQueue[ind] = tmp;
-                ind = right;
+                ind = minInd;
             } else {
                 break;
             }
         }
+        
     }
 }
