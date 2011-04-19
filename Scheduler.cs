@@ -60,6 +60,28 @@ public class Scheduler : MonoBehaviour {
         enabled = true;
     }
 
+    public void UpdateSchedule (float time, string message, GameObject obj = null) {
+        int index = 0;
+        for (int i = 1; i < priorityQueue.Count; i ++) {
+            TimerMessage msg = priorityQueue[i];
+            if (msg.message == message && msg.gameObject == obj) {
+                index = i;
+                break;
+            }
+        }
+        if (index > 0) {
+            float lastTime = priorityQueue[index].nextTime;
+            priorityQueue[index].nextTime = Time.time + time;
+            if (priorityQueue[index].nextTime < lastTime) {
+                BubbleUp (index);
+            } else if (priorityQueue[index].nextTime > lastTime) {
+                BubbleDown (index);
+            }
+        } else {
+            Debug.LogError ("Updating a non-existent item");
+        }
+    }
+
     public void CancelSchedule (string message, GameObject obj = null) {
         bool continueLoop = true;
         while (continueLoop) {
