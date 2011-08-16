@@ -20,7 +20,10 @@ public class ReplayView : MonoBehaviour {
 	}
 
     void OnDestroy () {
-        Dispatcher.GetInstance ().Unregister ("HandleReplay", gameObject);
+        Dispatcher d = Dispatcher.GetInstance ();
+        if (d) {
+            d.Unregister ("HandleReplay", gameObject);
+        }
 	    Replay.GetInstance ().RemoveReplayView (this);
     }
 	

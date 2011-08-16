@@ -25,7 +25,7 @@ public class Dispatcher : MonoBehaviour {
         parallelRecv = new Dictionary< string, List<GameObject> > ();
     }
 
-    public void Dispatch (string message, object parameter) {
+    public void Dispatch (string message, object parameter = null) {
         if (serialRecv.ContainsKey (message)) {
             serialRecv[message].Peek().SendMessage (message, parameter);
         }
