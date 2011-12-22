@@ -31,4 +31,8 @@ public class Listenable : MonoBehaviour {
             c.SendMessage (message, obj);
         }
     }
+
+    void OnDestroy () {
+        Shout ("Destroyed", gameObject);
+    }
 }
