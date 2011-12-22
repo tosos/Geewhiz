@@ -78,7 +78,7 @@ public class Scheduler : MonoBehaviour {
                 BubbleDown (index);
             }
         } else {
-            Debug.LogError ("Updating a non-existent item");
+            AddSchedule (time, message, false, obj);
         }
     }
 
