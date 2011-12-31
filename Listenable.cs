@@ -28,7 +28,7 @@ public class Listenable : MonoBehaviour {
         removers.Clear ();
 
         foreach (Component c in listeners) {
-            c.SendMessage (message, obj);
+            c.SendMessage (message, obj, SendMessageOptions.DontRequireReceiver);
         }
     }
 
