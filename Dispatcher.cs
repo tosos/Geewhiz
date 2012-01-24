@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public class Dispatcher : MonoBehaviour {
 
-    private Dictionary< string, Stack<GameObject> > serialRecv;
+    private Dictionary< string, List<GameObject> > serialRecv;
     private Dictionary< string, List<GameObject> > parallelRecv;
 
     static private Dispatcher instance = null;
@@ -21,13 +21,13 @@ public class Dispatcher : MonoBehaviour {
         }
         instance = null;
 
-        serialRecv = new Dictionary< string, Stack<GameObject> > ();
+        serialRecv = new Dictionary< string, List<GameObject> > ();
         parallelRecv = new Dictionary< string, List<GameObject> > ();
     }
 
     public void Dispatch (string message, object parameter = null) {
         if (serialRecv.ContainsKey (message)) {
-            serialRecv[message].Peek().SendMessage (message, parameter);
+            serialRecv[message][0].SendMessage (message, parameter);
         }
 
         if (parallelRecv.ContainsKey (message)) {
@@ -45,9 +45,9 @@ public class Dispatcher : MonoBehaviour {
             parallelRecv[message].Add(obj);
         } else {
             if (!serialRecv.ContainsKey (message)) {
-                serialRecv.Add (message, new Stack<GameObject> ());
+                serialRecv.Add (message, new List<GameObject> ());
             } 
-            serialRecv[message].Push(obj);
+            serialRecv[message].Insert(0, obj);
         }
     }
 
@@ -56,11 +56,7 @@ public class Dispatcher : MonoBehaviour {
             parallelRecv[message].Remove (obj);
         }
         if (serialRecv.ContainsKey (message)) {
-            if (serialRecv[message].Peek () == obj) {
-                serialRecv[message].Pop ();
-            } else {
-                Debug.LogError ("Trying to unregister serial receiver out of order");
-            }
+            serialRecv[message].Remove (obj);
         }
     }
 }
