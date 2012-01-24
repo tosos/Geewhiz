@@ -56,6 +56,10 @@ public class PriorityQueue<T> where T : new() {
         return queueImpl.Find (matchPred);
     }
 
+    public bool Contains (T item) {
+        return queueImpl.Contains (item);
+    }
+
     public void Update (T item) {
         int ind = queueImpl.IndexOf (item);
         if (ind > 0) {

@@ -4,16 +4,6 @@ using System.Collections.Generic;
 
 [System.Serializable]
 public class TimerMessage {
-    public TimerMessage () {
-        nextTime = 0.0f;
-    }
-    public TimerMessage (TimerMessage m) {
-        message = m.message;
-        secondsBetween = m.secondsBetween;
-        nextTime = m.nextTime;
-        gameObject = m.gameObject;
-    }
-
     public string message;
     public float secondsBetween;
     [HideInInspector]
