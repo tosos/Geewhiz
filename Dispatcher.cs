@@ -17,12 +17,16 @@ public class Dispatcher : MonoBehaviour {
 
     void Awake () {
         if (instance != null) {
-            Destroy (instance.gameObject);
+            Debug.LogError ("Instance should be null");
         }
-        instance = null;
+        instance = this;
 
         serialRecv = new Dictionary< string, List<GameObject> > ();
         parallelRecv = new Dictionary< string, List<GameObject> > ();
+    }
+
+    void OnDestroy () {
+        instance = null;
     }
 
     public void Dispatch (string message, object parameter = null) {

@@ -34,11 +34,16 @@ public class Scheduler : MonoBehaviour {
         }
         return instance;
     }
+    
+    void OnDestroy () {
+        instance = null;
+    }
+
 	void Awake () {
         if (instance != null) {
-            Destroy (instance.gameObject);
+            Debug.LogError ("Instance should be null");
         }
-        instance = null;
+        instance = this;
 
         priorityQueue = new PriorityQueue<TimerMessage> ();
         priorityQueue.comparator = Comparison;
