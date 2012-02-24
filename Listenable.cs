@@ -12,12 +12,10 @@ public class Listenable : MonoBehaviour {
 	}
 	
     public void AddListener (Component c) {
-        Debug.Log ("Add listener " + c + " to " + this);
         listeners.Add (c);
     }
 
     public void RemoveListener (Component c) {
-        Debug.Log ("Remove listener " + c + " from " + this);
         removers.Add (c);
     }
 
