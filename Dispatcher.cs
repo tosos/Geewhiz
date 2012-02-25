@@ -7,6 +7,8 @@ public class Dispatcher : MonoBehaviour {
     private Dictionary< string, List<GameObject> > serialRecv;
     private Dictionary< string, List<GameObject> > parallelRecv;
 
+    public string debugMessage = "";
+
     static private Dispatcher instance = null;
     static public Dispatcher GetInstance () {
         if (instance == null) {
@@ -58,6 +60,7 @@ public class Dispatcher : MonoBehaviour {
                 serialRecv.Add (message, new List<GameObject> ());
             } 
             serialRecv[message].Insert(0, obj);
+            UpdateDebug ();
         }
     }
 
@@ -67,6 +70,16 @@ public class Dispatcher : MonoBehaviour {
         }
         if (serialRecv.ContainsKey (message)) {
             serialRecv[message].Remove (obj);
+            UpdateDebug ();
+        }
+    }
+
+    void UpdateDebug () {
+        if (debugMessage != "" && guiText != null) {
+            guiText.text = "";
+            foreach (GameObject go in serialRecv[debugMessage]) {
+                guiText.text += go.name + "\n";
+            }
         }
     }
 }
