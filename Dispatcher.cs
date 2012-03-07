@@ -102,6 +102,8 @@ public class Dispatcher : MonoBehaviour {
                 networkView.RPC ("RPCDispatchV", RPCMode.Others, message, parameter);
             } else if (parameter is Quaternion) {
                 networkView.RPC ("RPCDispatchQ", RPCMode.Others, message, parameter);
+            } else {
+                Debug.Log ("Can't dispatch a non RPCable parameter");
             }
         }
     }
@@ -127,6 +129,8 @@ public class Dispatcher : MonoBehaviour {
                     networkView.RPC ("RPCDispatchV", player, message, parameter);
                 } else if (parameter is Quaternion) {
                     networkView.RPC ("RPCDispatchQ", player, message, parameter);
+                } else {
+                    Debug.Log ("Can't dispatch a non RPCable parameter");
                 }
             }
         }
