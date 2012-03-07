@@ -88,7 +88,9 @@ public class Dispatcher : MonoBehaviour {
     {
         Dispatch (message, parameter);
         if (Network.peerType != NetworkPeerType.Disconnected && networkView != null) {
-            if (parameter is int) {
+            if (parameter == null) {
+                networkView.RPC ("RPCDispatchS", RPCMode.Others, message, null);
+            } else if (parameter is int) {
                 networkView.RPC ("RPCDispatchI", RPCMode.Others, message, parameter);
             } else if (parameter is float) {
                 networkView.RPC ("RPCDispatchF", RPCMode.Others, message, parameter);
@@ -115,7 +117,9 @@ public class Dispatcher : MonoBehaviour {
                 Debug.LogError ("Cannot remote dispatch.  " +
                     "Need to attach a networkView to the Hub where Dispatch is attached");
             } else {
-                if (parameter is int) {
+                if (parameter == null) {
+                    networkView.RPC ("RPCDispatchS", player, message, null);
+                } else if (parameter is int) {
                     networkView.RPC ("RPCDispatchI", player, message, parameter);
                 } else if (parameter is float) {
                     networkView.RPC ("RPCDispatchF", player, message, parameter);
