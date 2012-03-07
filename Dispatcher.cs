@@ -31,6 +31,7 @@ public class Dispatcher : MonoBehaviour {
         instance = null;
     }
 
+    [RPC]
     public void Dispatch (string message, object parameter = null) {
         if (serialRecv.ContainsKey (message)) {
             if (serialRecv[message][0] != null) {
@@ -45,6 +46,26 @@ public class Dispatcher : MonoBehaviour {
                 if (go != null) {
                     go.SendMessage (message, parameter);
                 }
+            }
+        }
+    }
+
+    public void RemoteDispatch (string message, object parameter = null)
+    {
+        Dispatch (message, parameter);
+        if (Network.peerType != NetworkPeerType.Disconnected && networkView != null) {
+            networkView.RPC (message, RPCMode.Others, parameter);
+        }
+    }
+
+    public void RemoteDispatch (string message, NetworkPlayer player, object parameter = null)
+    {
+        if (Network.peerType != NetworkPeerType.Disconnected) {
+            if (networkView == null) {
+                Debug.LogError ("Cannot remote dispatch.  " +
+                    "Need to attach a networkView to the Hub where Dispatch is attached");
+            } else {
+                networkView.RPC (message, player, parameter);
             }
         }
     }
