@@ -50,6 +50,11 @@ public class Dispatcher : MonoBehaviour {
     }
 
     [RPC]
+    public void RPCDispatchE (string message) {
+        Dispatch (message, parameter);
+    }
+
+    [RPC]
     public void RPCDispatchI (string message, int parameter) {
         Dispatch (message, parameter);
     }
@@ -89,7 +94,7 @@ public class Dispatcher : MonoBehaviour {
         Dispatch (message, parameter);
         if (Network.peerType != NetworkPeerType.Disconnected && networkView != null) {
             if (parameter == null) {
-                networkView.RPC ("RPCDispatchS", RPCMode.Others, message, null);
+                networkView.RPC ("RPCDispatchE", RPCMode.Others, message);
             } else if (parameter is int) {
                 networkView.RPC ("RPCDispatchI", RPCMode.Others, message, parameter);
             } else if (parameter is float) {
@@ -118,7 +123,7 @@ public class Dispatcher : MonoBehaviour {
                     "Need to attach a networkView to the Hub where Dispatch is attached");
             } else {
                 if (parameter == null) {
-                    networkView.RPC ("RPCDispatchS", player, message, null);
+                    networkView.RPC ("RPCDispatchE", player, message);
                 } else if (parameter is int) {
                     networkView.RPC ("RPCDispatchI", player, message, parameter);
                 } else if (parameter is float) {
