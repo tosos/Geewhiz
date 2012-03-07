@@ -51,7 +51,7 @@ public class Dispatcher : MonoBehaviour {
 
     [RPC]
     public void RPCDispatchE (string message) {
-        Dispatch (message, parameter);
+        Dispatch (message);
     }
 
     [RPC]
