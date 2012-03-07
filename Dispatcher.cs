@@ -50,37 +50,37 @@ public class Dispatcher : MonoBehaviour {
     }
 
     [RPC]
-    public void RPCDispatch (string message, int parameter) {
+    public void RPCDispatchI (string message, int parameter) {
         Dispatch (message, parameter);
     }
 
     [RPC]
-    public void RPCDispatch (string message, float parameter) {
+    public void RPCDispatchF (string message, float parameter) {
         Dispatch (message, parameter);
     }
 
     [RPC]
-    public void RPCDispatch (string message, string parameter) {
+    public void RPCDispatchS (string message, string parameter) {
         Dispatch (message, parameter);
     }
 
     [RPC]
-    public void RPCDispatch (string message, NetworkPlayer parameter) {
+    public void RPCDispatchP (string message, NetworkPlayer parameter) {
         Dispatch (message, parameter);
     }
 
     [RPC]
-    public void RPCDispatch (string message, NetworkViewID parameter) {
+    public void RPCDispatchID (string message, NetworkViewID parameter) {
         Dispatch (message, parameter);
     }
 
     [RPC]
-    public void RPCDispatch (string message, Vector3 parameter) {
+    public void RPCDispatchV (string message, Vector3 parameter) {
         Dispatch (message, parameter);
     }
 
     [RPC]
-    public void RPCDispatch (string message, Quaternion parameter) {
+    public void RPCDispatchQ (string message, Quaternion parameter) {
         Dispatch (message, parameter);
     }
 
@@ -88,7 +88,21 @@ public class Dispatcher : MonoBehaviour {
     {
         Dispatch (message, parameter);
         if (Network.peerType != NetworkPeerType.Disconnected && networkView != null) {
-            networkView.RPC ("Dispatch", RPCMode.Others, message, parameter);
+            if (parameter is int) {
+                networkView.RPC ("RPCDispatchI", RPCMode.Others, message, parameter);
+            } else if (parameter is float) {
+                networkView.RPC ("RPCDispatchF", RPCMode.Others, message, parameter);
+            } else if (parameter is string) {
+                networkView.RPC ("RPCDispatchS", RPCMode.Others, message, parameter);
+            } else if (parameter is NetworkPlayer) {
+                networkView.RPC ("RPCDispatchP", RPCMode.Others, message, parameter);
+            } else if (parameter is NetworkViewID) {
+                networkView.RPC ("RPCDispatchID", RPCMode.Others, message, parameter);
+            } else if (parameter is Vector3) {
+                networkView.RPC ("RPCDispatchV", RPCMode.Others, message, parameter);
+            } else if (parameter is Quaternion) {
+                networkView.RPC ("RPCDispatchQ", RPCMode.Others, message, parameter);
+            }
         }
     }
 
@@ -99,7 +113,21 @@ public class Dispatcher : MonoBehaviour {
                 Debug.LogError ("Cannot remote dispatch.  " +
                     "Need to attach a networkView to the Hub where Dispatch is attached");
             } else {
-                networkView.RPC ("Dispatch", player, message, parameter);
+                if (parameter is int) {
+                    networkView.RPC ("RPCDispatchI", player, message, parameter);
+                } else if (parameter is float) {
+                    networkView.RPC ("RPCDispatchF", player, message, parameter);
+                } else if (parameter is string) {
+                    networkView.RPC ("RPCDispatchS", player, message, parameter);
+                } else if (parameter is NetworkPlayer) {
+                    networkView.RPC ("RPCDispatchP", player, message, parameter);
+                } else if (parameter is NetworkViewID) {
+                    networkView.RPC ("RPCDispatchID", player, message, parameter);
+                } else if (parameter is Vector3) {
+                    networkView.RPC ("RPCDispatchV", player, message, parameter);
+                } else if (parameter is Quaternion) {
+                    networkView.RPC ("RPCDispatchQ", player, message, parameter);
+                }
             }
         }
     }
