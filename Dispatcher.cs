@@ -31,7 +31,6 @@ public class Dispatcher : MonoBehaviour {
         instance = null;
     }
 
-    [RPC]
     public void Dispatch (string message, object parameter = null) {
         if (serialRecv.ContainsKey (message)) {
             if (serialRecv[message][0] != null) {
@@ -48,6 +47,41 @@ public class Dispatcher : MonoBehaviour {
                 }
             }
         }
+    }
+
+    [RPC]
+    public void RPCDispatch (string message, int parameter) {
+        Dispatch (message, parameter);
+    }
+
+    [RPC]
+    public void RPCDispatch (string message, float parameter) {
+        Dispatch (message, parameter);
+    }
+
+    [RPC]
+    public void RPCDispatch (string message, string parameter) {
+        Dispatch (message, parameter);
+    }
+
+    [RPC]
+    public void RPCDispatch (string message, NetworkPlayer parameter) {
+        Dispatch (message, parameter);
+    }
+
+    [RPC]
+    public void RPCDispatch (string message, NetworkViewID parameter) {
+        Dispatch (message, parameter);
+    }
+
+    [RPC]
+    public void RPCDispatch (string message, Vector3 parameter) {
+        Dispatch (message, parameter);
+    }
+
+    [RPC]
+    public void RPCDispatch (string message, Quaternion parameter) {
+        Dispatch (message, parameter);
     }
 
     public void RemoteDispatch (string message, object parameter = null)
