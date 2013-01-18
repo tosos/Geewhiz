@@ -25,6 +25,18 @@ public class Listenable : MonoBehaviour {
         }
         removers.Clear ();
 
+        bool check = true;
+        while (check) {
+            check = false;
+            foreach (Component c in listeners) {
+                if (!c) {
+                    check = true;
+                    listeners.Remove (c);
+                    break;
+                }
+            }
+        }
+
         foreach (Component c in listeners) {
             c.SendMessage (message, obj, SendMessageOptions.DontRequireReceiver);
         }
