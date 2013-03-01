@@ -9,26 +9,28 @@ public class Dispatcher : MonoBehaviour {
 
     public string debugMessage = "";
 
-    static private Dispatcher instance = null;
-    static public Dispatcher GetInstance () {
-        if (instance == null) {
-            instance = (Dispatcher) FindObjectOfType (typeof(Dispatcher));
+    static private Dispatcher _instance = null;
+    static public Dispatcher instance {
+        get {
+            if (_instance == null) {
+                _instance = (Dispatcher) FindObjectOfType (typeof(Dispatcher));
+            }
+            return instance;
         }
-        return instance;
     }
 
     void Awake () {
-        if (instance != null) {
+        if (_instance != null) {
             Debug.LogError ("Instance should be null");
         }
-        instance = this;
+        _instance = this;
 
         serialRecv = new Dictionary< string, List<GameObject> > ();
         parallelRecv = new Dictionary< string, List<GameObject> > ();
     }
 
     void OnDestroy () {
-        instance = null;
+        _instance = null;
     }
 
     public void Dispatch (string message, object parameter = null) {

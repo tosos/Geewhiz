@@ -7,10 +7,10 @@ public class MouseDispatch : MonoBehaviour {
 	void Update () {
         for (int i = 0; i < 3; i ++) {
 	        if (Input.GetMouseButtonDown (i)) {
-                Dispatcher.GetInstance ().Dispatch ("MouseButtonDown", i);
+                Dispatcher.instance.Dispatch ("MouseButtonDown", i);
             }
 	        if (Input.GetMouseButtonUp (i)) {
-                Dispatcher.GetInstance ().Dispatch ("MouseButtonUp", i);
+                Dispatcher.instance.Dispatch ("MouseButtonUp", i);
             }
         }
 	}

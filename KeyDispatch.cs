@@ -13,14 +13,14 @@ public class KeyDispatch : MonoBehaviour {
 	
 	void Update () {
         if (CheckAnyKey && Input.anyKeyDown) {
-            Dispatcher.GetInstance ().Dispatch ("AnyKeyDown", ""); 
+            Dispatcher.instance.Dispatch ("AnyKeyDown", ""); 
         }
         foreach (KeyCode key in keys) {
             if (Input.GetKeyDown (key)) {
-                Dispatcher.GetInstance ().Dispatch ("KeyDown" + key.ToString(), "");
+                Dispatcher.instance.Dispatch ("KeyDown" + key.ToString(), "");
             }
             if (Input.GetKeyUp (key)) {
-                Dispatcher.GetInstance ().Dispatch ("KeyUp" + key.ToString(), "");
+                Dispatcher.instance.Dispatch ("KeyUp" + key.ToString(), "");
             }
         }
 	}

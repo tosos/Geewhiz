@@ -27,23 +27,25 @@ public class Scheduler : MonoBehaviour {
         }
     }
 
-    static private Scheduler instance = null;
-    static public Scheduler GetInstance () {
-        if (instance == null) {
-            instance = (Scheduler) FindObjectOfType (typeof(Scheduler));
+    static private Scheduler _instance = null;
+    static public Scheduler instance {
+        get {
+            if (_instance == null) {
+                _instance = (Scheduler) FindObjectOfType (typeof(Scheduler));
+            }
+            return instance;
         }
-        return instance;
     }
     
     void OnDestroy () {
-        instance = null;
+        _instance = null;
     }
 
 	void Awake () {
-        if (instance != null) {
+        if (_instance != null) {
             Debug.LogError ("Instance should be null");
         }
-        instance = this;
+        _instance = this;
 
         priorityQueue = new PriorityQueue<TimerMessage> ();
         priorityQueue.comparator = Comparison;
@@ -116,7 +118,7 @@ public class Scheduler : MonoBehaviour {
             if (obj) {
                 obj.SendMessage (message, secondsBetween);
             } else {
-                Dispatcher.GetInstance ().Dispatch (message, secondsBetween);
+                Dispatcher.instance.Dispatch (message, secondsBetween);
             }
 
         }
