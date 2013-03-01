@@ -29,12 +29,7 @@ public class Scheduler : MonoBehaviour {
 
     static private Scheduler _instance = null;
     static public Scheduler instance {
-        get {
-            if (_instance == null) {
-                _instance = (Scheduler) FindObjectOfType (typeof(Scheduler));
-            }
-            return instance;
-        }
+        get { return _instance; }
     }
     
     void OnDestroy () {

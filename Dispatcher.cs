@@ -11,12 +11,7 @@ public class Dispatcher : MonoBehaviour {
 
     static private Dispatcher _instance = null;
     static public Dispatcher instance {
-        get {
-            if (_instance == null) {
-                _instance = (Dispatcher) FindObjectOfType (typeof(Dispatcher));
-            }
-            return instance;
-        }
+        get { return _instance; }
     }
 
     void Awake () {
