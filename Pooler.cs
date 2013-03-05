@@ -29,7 +29,9 @@ public class Pooler : MonoBehaviour {
         pooledViewIDs = new Dictionary<NetworkPlayer, Queue<NetworkViewID> >();
 
         pooledViewIDs[Network.player] = new Queue<NetworkViewID> ();
-        FillViewPool ();
+        if (Network.peerType != NetworkPeerType.Disconnected) {
+            FillViewPool ();
+        }
     }
 
     void OnDestroy () {
@@ -47,24 +49,32 @@ public class Pooler : MonoBehaviour {
 
     Transform InstantiateInternal (int index, Vector3 pos, Quaternion rot) {
         Transform inst;
+        if (pooledInstances[index] == null) {
+            pooledInstances[index] = new Queue<Transform>();
+        }
         if (pooledInstances[index].Count == 0) {
             inst = (Transform) Instantiate (poolablePrefabs[index], Vector3.zero, Quaternion.identity);
-            if (!inst.GetComponent<Poolable>()) {
-                Poolable pool = inst.gameObject.AddComponent<Poolable>();
-                pool.prefabIndex = index;
+            Poolable pool = inst.GetComponent<Poolable>();
+            if (pool == null) {
+                pool = inst.gameObject.AddComponent<Poolable>();
             }
-            pooledInstances[index].Enqueue (inst);
+            pool.prefabIndex = index;
         } else {
             inst = pooledInstances[index].Dequeue ();
         }
         inst.position = pos;
         inst.rotation = rot;
         inst.gameObject.SetActiveRecursively (true);
-        inst.BroadcastMessage ("PoolInstantiated", SendMessageOptions.DontRequireReceiver);
+        StartCoroutine (DelayedStartMessage (inst));
         return inst;
     }
 
-    Transform InstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot) {
+    IEnumerator DelayedStartMessage (Transform inst) {
+        yield return new WaitForEndOfFrame ();
+        inst.BroadcastMessage ("PoolStart", SendMessageOptions.DontRequireReceiver);
+    }
+
+    public Transform InstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot) {
         int index = PrefabIndex (prefab);
         if (index < 0) {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
@@ -73,7 +83,7 @@ public class Pooler : MonoBehaviour {
         return InstantiateInternal (index, pos, rot);
     }
 
-    Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot) {
+    public Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot) {
         int index = PrefabIndex (prefab);
         if (index < 0) {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
@@ -109,13 +119,25 @@ public class Pooler : MonoBehaviour {
         yield break;
     }
 
-    void ReturnToPool (Transform instance) {
-        instance.BroadcastMessage ("PoolReturned", SendMessageOptions.DontRequireReceiver);
+    IEnumerator DelayedReturn (Transform instance) {
+        yield return new WaitForEndOfFrame ();
+        instance.BroadcastMessage ("PoolReturn", SendMessageOptions.DontRequireReceiver);
         instance.gameObject.SetActiveRecursively (false);
         pooledInstances[instance.GetComponent<Poolable>().prefabIndex].Enqueue (instance);
+        NetworkView[] views = instance.GetComponentsInChildren<NetworkView>();
+        foreach (NetworkView view in views) {
+            if (view.viewID != NetworkViewID.unassigned) {
+                ViewToPool (view.viewID);
+                view.viewID = NetworkViewID.unassigned;
+            }
+        }
     }
 
-    void NetworkReturnToPool (Transform instance) {
+    public void ReturnToPool (Transform instance) {
+        StartCoroutine (DelayedReturn (instance));
+    }
+
+    public void NetworkReturnToPool (Transform instance) {
         if (instance.networkView.isMine) {
             NetworkViewID id = instance.networkView.viewID;
             networkView.RPC ("RPCReturnID", RPCMode.AllBuffered, id);
@@ -126,9 +148,7 @@ public class Pooler : MonoBehaviour {
     void RPCReturnID (NetworkViewID id) {
         NetworkView view = NetworkView.Find (id);
         Transform instance = view.transform;
-        instance.BroadcastMessage ("PoolReturned", SendMessageOptions.DontRequireReceiver);
-        instance.gameObject.SetActiveRecursively (false);
-        pooledInstances[instance.GetComponent<Poolable>().prefabIndex].Enqueue (instance);
+        StartCoroutine (DelayedReturn (instance));
     }
 
     void FillViewPool () {
