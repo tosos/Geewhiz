@@ -152,7 +152,7 @@ public class Pooler : MonoBehaviour {
     }
 
     void FillViewPool () {
-        while (pooledViewIDs.Count < minPooledIds) {
+        while (pooledViewIDs[Network.player].Count < minPooledIds) {
             NetworkViewID viewID = Network.AllocateViewID ();
             networkView.RPC ("AddViewID", RPCMode.AllBuffered, viewID);
         }
