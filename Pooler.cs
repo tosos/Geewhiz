@@ -151,12 +151,18 @@ public class Pooler : MonoBehaviour {
         StartCoroutine (DelayedReturn (instance));
     }
 
+    private bool semaphoreFillViewPool = false;
     IEnumerator FillViewPool () {
+        if (semaphoreFillViewPool) {
+            yield break;
+        }
+        semaphoreFillViewPool = true;
         while (pooledViewIDs[Network.player].Count < minPooledIds) {
             NetworkViewID viewID = Network.AllocateViewID ();
             networkView.RPC ("AddViewID", RPCMode.AllBuffered, viewID);
             yield return new WaitForEndOfFrame ();
         }
+        semaphoreFillViewPool = false;
     }
 
     [RPC]
@@ -175,7 +181,7 @@ public class Pooler : MonoBehaviour {
             ret = pooledViewIDs[player].Dequeue ();
         }
         if (Network.player == player && pooledViewIDs[player].Count < minPooledIds) {
-            FillViewPool ();
+            StartCoroutine (FillViewPool ());
         }
         return ret;
     }
