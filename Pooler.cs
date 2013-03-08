@@ -30,7 +30,7 @@ public class Pooler : MonoBehaviour {
 
         pooledViewIDs[Network.player] = new Queue<NetworkViewID> ();
         if (Network.peerType != NetworkPeerType.Disconnected) {
-            FillViewPool ();
+            StartCoroutine (FillViewPool ());
         }
     }
 
@@ -151,10 +151,11 @@ public class Pooler : MonoBehaviour {
         StartCoroutine (DelayedReturn (instance));
     }
 
-    void FillViewPool () {
+    IEnumerator FillViewPool () {
         while (pooledViewIDs[Network.player].Count < minPooledIds) {
             NetworkViewID viewID = Network.AllocateViewID ();
             networkView.RPC ("AddViewID", RPCMode.AllBuffered, viewID);
+            yield return new WaitForEndOfFrame ();
         }
     }
 
