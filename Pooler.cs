@@ -62,6 +62,7 @@ public class Pooler : MonoBehaviour {
         } else {
             inst = pooledInstances[index].Dequeue ();
         }
+        inst.parent = null;
         inst.position = pos;
         inst.rotation = rot;
         inst.gameObject.SetActiveRecursively (true);
@@ -122,8 +123,8 @@ public class Pooler : MonoBehaviour {
     IEnumerator DelayedReturn (Transform instance) {
         yield return new WaitForEndOfFrame ();
         instance.BroadcastMessage ("PoolReturn", SendMessageOptions.DontRequireReceiver);
+        instance.parent = transform;
         instance.gameObject.SetActiveRecursively (false);
-        pooledInstances[instance.GetComponent<Poolable>().prefabIndex].Enqueue (instance);
         NetworkView[] views = instance.GetComponentsInChildren<NetworkView>();
         foreach (NetworkView view in views) {
             if (view.viewID != NetworkViewID.unassigned) {
@@ -131,6 +132,11 @@ public class Pooler : MonoBehaviour {
                 view.viewID = NetworkViewID.unassigned;
             }
         }
+        Poolable pool = instance.GetComponent<Poolable>();
+        if (!pool) {
+            Debug.LogError ("Poolable hasn't been added to a component being returned.");
+        }
+        pooledInstances[pool.prefabIndex].Enqueue (instance);
     }
 
     public void ReturnToPool (Transform instance) {
