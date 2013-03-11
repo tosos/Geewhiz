@@ -10,6 +10,12 @@ public class Listenable : MonoBehaviour {
 	    listeners = new ArrayList ();
         removers = new ArrayList ();
 	}
+
+/*
+    protected void PoolReturn () {
+        listeners.Clear ();
+    }
+*/
 	
     public void AddListener (Component c) {
         listeners.Add (c);
