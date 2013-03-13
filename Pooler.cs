@@ -196,7 +196,7 @@ public class Pooler : MonoBehaviour {
         pooledViewIDs[viewID.owner].Enqueue (viewID);        
     }
 
-    IEnumerator SetupViews (NetworkPlayer player, Transform inst) {
+    public IEnumerator SetupViews (NetworkPlayer player, Transform inst) {
         foreach (NetworkView view in inst.GetComponentsInChildren<NetworkView>()) {
             NetworkViewID id = ViewFromPool (player);
             while (id == NetworkViewID.unassigned) {
