@@ -93,7 +93,6 @@ public class Pooler : MonoBehaviour {
             pooledInstances[index] = new Queue<Transform>();
         }
         if (pooledInstances[index].Count == 0) {
-            Debug.Log ("Creating a new " + poolablePrefabs[index].name);
             inst = (Transform) Instantiate (poolablePrefabs[index], Vector3.zero, Quaternion.identity);
             Poolable pool = inst.GetComponent<Poolable>();
             if (pool == null) {
@@ -126,18 +125,23 @@ public class Pooler : MonoBehaviour {
         yield return new WaitForEndOfFrame ();
         instance.BroadcastMessage ("PoolReturn", SendMessageOptions.DontRequireReceiver);
         instance.parent = transform;
-        instance.gameObject.SetActiveRecursively (false);
-        NetworkView[] views = instance.GetComponentsInChildren<NetworkView>();
-        foreach (NetworkView view in views) {
+        foreach (NetworkView view in instance.GetComponentsInChildren<NetworkView>()) {
             if (view.viewID != NetworkViewID.unassigned) {
                 ViewToPool (view.viewID);
                 view.viewID = NetworkViewID.unassigned;
+            }
+        }
+        foreach (Rigidbody rb in instance.GetComponentsInChildren<Rigidbody>()) {
+            if (!rb.isKinematic) {
+                rb.velocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
             }
         }
         Poolable pool = instance.GetComponent<Poolable>();
         if (!pool) {
             Debug.LogError ("Poolable hasn't been added to a component being returned.");
         }
+        instance.gameObject.SetActiveRecursively (false);
         pooledInstances[pool.prefabIndex].Enqueue (instance);
     }
 
@@ -193,8 +197,7 @@ public class Pooler : MonoBehaviour {
     }
 
     IEnumerator SetupViews (NetworkPlayer player, Transform inst) {
-        NetworkView[] views = inst.GetComponentsInChildren<NetworkView>();
-        foreach (NetworkView view in views) {
+        foreach (NetworkView view in inst.GetComponentsInChildren<NetworkView>()) {
             NetworkViewID id = ViewFromPool (player);
             while (id == NetworkViewID.unassigned) {
                 Debug.LogError ("Having to wait on Ids.  minPooledIds must be increased");
