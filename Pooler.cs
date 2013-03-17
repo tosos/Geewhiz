@@ -165,18 +165,19 @@ public class Pooler : MonoBehaviour {
         semaphoreFillViewPool = true;
         while (pooledViewIDs[Network.player].Count < minPooledIds) {
             NetworkViewID viewID = Network.AllocateViewID ();
-            networkView.RPC ("AddViewID", RPCMode.All, viewID);
+            networkView.RPC ("AddViewID", RPCMode.All, viewID, Network.player);
             yield return new WaitForEndOfFrame ();
         }
         semaphoreFillViewPool = false;
     }
 
     [RPC]
-    void AddViewID (NetworkViewID viewID) {
-        if (!pooledViewIDs.ContainsKey (viewID.owner)) {
-            pooledViewIDs[viewID.owner] = new Queue<NetworkViewID> ();
+    void AddViewID (NetworkViewID viewID, NetworkPlayer sender) {
+        if (!pooledViewIDs.ContainsKey (sender)) {
+            Debug.Log ("Adding a view ID from player " + viewID.owner);
+            pooledViewIDs[sender] = new Queue<NetworkViewID> ();
         }
-        pooledViewIDs[viewID.owner].Enqueue (viewID);
+        pooledViewIDs[sender].Enqueue (viewID);
     }
 
     NetworkViewID ViewFromPool (NetworkPlayer player) {
@@ -194,10 +195,13 @@ public class Pooler : MonoBehaviour {
     }
 
     void ViewToPool (NetworkViewID viewID) {
+        /* Can't do this.  viewID.owner is the wrong thing 
         pooledViewIDs[viewID.owner].Enqueue (viewID);        
+        */
     }
 
     public IEnumerator SetupViews (NetworkPlayer player, Transform inst) {
+        Debug.Log ("Setting up views from player " + player);
         foreach (NetworkView view in inst.GetComponentsInChildren<NetworkView>()) {
             NetworkViewID id = ViewFromPool (player);
             while (id == NetworkViewID.unassigned) {
