@@ -53,7 +53,7 @@ public class Pooler : MonoBehaviour {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
-        networkView.RPC ("RemoteInstance", RPCMode.OthersBuffered, index, pos, rot);
+        networkView.RPC ("RemoteInstance", RPCMode.OthersBuffered, index, pos, rot, Network.player);
         Transform inst = InstantiateInternal (index, pos, rot);
         if (inst.networkView == null) {
             NetworkView view = inst.gameObject.AddComponent<NetworkView>();
@@ -116,9 +116,9 @@ public class Pooler : MonoBehaviour {
     }
 
     [RPC]
-    void RemoteInstance (int index, Vector3 pos, Quaternion rot, NetworkMessageInfo info) {
+    void RemoteInstance (int index, Vector3 pos, Quaternion rot, NetworkPlayer sender) {
         Transform inst = InstantiateInternal (index, pos, rot);
-        StartCoroutine (SetupViews (info.sender, inst));
+        StartCoroutine (SetupViews (sender, inst));
     }
 
     IEnumerator DelayedReturn (Transform instance) {
@@ -165,7 +165,7 @@ public class Pooler : MonoBehaviour {
         semaphoreFillViewPool = true;
         while (pooledViewIDs[Network.player].Count < minPooledIds) {
             NetworkViewID viewID = Network.AllocateViewID ();
-            networkView.RPC ("AddViewID", RPCMode.AllBuffered, viewID);
+            networkView.RPC ("AddViewID", RPCMode.All, viewID);
             yield return new WaitForEndOfFrame ();
         }
         semaphoreFillViewPool = false;
@@ -189,6 +189,7 @@ public class Pooler : MonoBehaviour {
         if (Network.player == player && pooledViewIDs[player].Count < minPooledIds) {
             StartCoroutine (FillViewPool ());
         }
+        Debug.Log ("Returning pool ID " + ret);
         return ret;
     }
 
