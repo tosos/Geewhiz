@@ -139,7 +139,7 @@ public class Pooler : MonoBehaviour {
         }
         Poolable pool = instance.GetComponent<Poolable>();
         if (!pool) {
-            Debug.LogError ("Poolable hasn't been added to a component being returned.");
+            Debug.LogError ("Poolable hasn't been added to " + instance.name);
         }
         instance.gameObject.SetActiveRecursively (false);
         pooledInstances[pool.prefabIndex].Enqueue (instance);
@@ -174,7 +174,6 @@ public class Pooler : MonoBehaviour {
     [RPC]
     void AddViewID (NetworkViewID viewID, NetworkPlayer sender) {
         if (!pooledViewIDs.ContainsKey (sender)) {
-            Debug.Log ("Adding a view ID from player " + viewID.owner);
             pooledViewIDs[sender] = new Queue<NetworkViewID> ();
         }
         pooledViewIDs[sender].Enqueue (viewID);
@@ -190,7 +189,6 @@ public class Pooler : MonoBehaviour {
         if (Network.player == player && pooledViewIDs[player].Count < minPooledIds) {
             StartCoroutine (FillViewPool ());
         }
-        Debug.Log ("Returning pool ID " + ret);
         return ret;
     }
 
@@ -201,7 +199,6 @@ public class Pooler : MonoBehaviour {
     }
 
     public IEnumerator SetupViews (NetworkPlayer player, Transform inst) {
-        Debug.Log ("Setting up views from player " + player);
         foreach (NetworkView view in inst.GetComponentsInChildren<NetworkView>()) {
             NetworkViewID id = ViewFromPool (player);
             while (id == NetworkViewID.unassigned) {
