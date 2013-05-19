@@ -19,6 +19,10 @@ public class PriorityQueue<T> where T : new() {
         }
     }
 
+    public void Clear () { 
+        queueImpl.Clear ();
+    }
+
     public bool Empty () {
         return queueImpl.Count <= 1;
     }
