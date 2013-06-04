@@ -105,7 +105,7 @@ public class Pooler : MonoBehaviour {
         inst.parent = null;
         inst.position = pos;
         inst.rotation = rot;
-        inst.gameObject.SetActiveRecursively (true);
+        inst.gameObject.SetActive (true);
         StartCoroutine (DelayedStartMessage (inst));
         return inst;
     }
@@ -141,7 +141,7 @@ public class Pooler : MonoBehaviour {
         if (!pool) {
             Debug.LogError ("Poolable hasn't been added to " + instance.name);
         }
-        instance.gameObject.SetActiveRecursively (false);
+        instance.gameObject.SetActive (false);
         pooledInstances[pool.prefabIndex].Enqueue (instance);
     }
 
