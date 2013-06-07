@@ -55,7 +55,7 @@ public class Pooler : MonoBehaviour {
         }
         // get the view id for the top level instance.
         NetworkViewID id = ViewFromPool (Network.player);
-        networkView.RPC ("RemoteInstance", RPCMode.OthersBuffered, index, pos, id, rot, Network.player);
+        networkView.RPC ("RemoteInstance", RPCMode.OthersBuffered, index, pos, rot, id, Network.player);
         Transform inst = InstantiateInternal (index, pos, rot);
         if (inst.networkView == null) {
             NetworkView view = inst.gameObject.AddComponent<NetworkView>();
