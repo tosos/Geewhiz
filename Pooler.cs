@@ -53,12 +53,15 @@ public class Pooler : MonoBehaviour {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
-        networkView.RPC ("RemoteInstance", RPCMode.OthersBuffered, index, pos, rot, Network.player);
+        // get the view id for the top level instance.
+        NetworkViewID id = ViewFromPool (Network.player);
+        networkView.RPC ("RemoteInstance", RPCMode.OthersBuffered, index, pos, id, rot, Network.player);
         Transform inst = InstantiateInternal (index, pos, rot);
         if (inst.networkView == null) {
             NetworkView view = inst.gameObject.AddComponent<NetworkView>();
             view.stateSynchronization = NetworkStateSynchronization.Off;
         }
+        inst.networkView.viewID = id;
         StartCoroutine (SetupViews (Network.player, inst));
         return inst;
     }
@@ -116,8 +119,13 @@ public class Pooler : MonoBehaviour {
     }
 
     [RPC]
-    void RemoteInstance (int index, Vector3 pos, Quaternion rot, NetworkPlayer sender) {
+    void RemoteInstance (int index, Vector3 pos, Quaternion rot, NetworkViewID id, NetworkPlayer sender) {
         Transform inst = InstantiateInternal (index, pos, rot);
+        if (inst.networkView == null) {
+            NetworkView view = inst.gameObject.AddComponent<NetworkView>();
+            view.stateSynchronization = NetworkStateSynchronization.Off;
+        }
+        inst.networkView.viewID = id;
         StartCoroutine (SetupViews (sender, inst));
     }
 
@@ -200,6 +208,10 @@ public class Pooler : MonoBehaviour {
 
     public IEnumerator SetupViews (NetworkPlayer player, Transform inst) {
         foreach (NetworkView view in inst.GetComponentsInChildren<NetworkView>()) {
+            if (view == inst.networkView) {
+                // skip the one attached to the main component.
+                continue;
+            }
             NetworkViewID id = ViewFromPool (player);
             while (id == NetworkViewID.unassigned) {
                 Debug.LogError ("Having to wait on Ids.  minPooledIds must be increased");
