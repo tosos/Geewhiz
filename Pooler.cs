@@ -13,7 +13,7 @@ public class Pooler : MonoBehaviour {
     static public Pooler instance {
         get {
             if (_instance == null) {
-                _instance = (Pooler) FindObjectOfType (typeof (Dispatcher));
+                _instance = (Pooler) FindObjectOfType (typeof (Pooler));
             }
             return _instance;
         }
