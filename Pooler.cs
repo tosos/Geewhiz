@@ -109,13 +109,7 @@ public class Pooler : MonoBehaviour {
         inst.position = pos;
         inst.rotation = rot;
         inst.gameObject.SetActive (true);
-        StartCoroutine (DelayedStartMessage (inst));
         return inst;
-    }
-
-    IEnumerator DelayedStartMessage (Transform inst) {
-        yield return new WaitForEndOfFrame ();
-        inst.BroadcastMessage ("PoolStart", SendMessageOptions.DontRequireReceiver);
     }
 
     [RPC]
@@ -137,12 +131,6 @@ public class Pooler : MonoBehaviour {
             if (view.viewID != NetworkViewID.unassigned) {
                 ViewToPool (view.viewID);
                 view.viewID = NetworkViewID.unassigned;
-            }
-        }
-        foreach (Rigidbody rb in instance.GetComponentsInChildren<Rigidbody>()) {
-            if (!rb.isKinematic) {
-                rb.velocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
             }
         }
         Poolable pool = instance.GetComponent<Poolable>();
