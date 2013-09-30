@@ -147,12 +147,16 @@ public class Dispatcher : MonoBehaviour {
             if (!parallelRecv.ContainsKey (message)) {
                 parallelRecv.Add (message, new List<GameObject> ());
             } 
-            parallelRecv[message].Add(obj);
+            if (!parallelRecv[message].Contains (obj)) { 
+                parallelRecv[message].Add(obj);
+            }
         } else {
             if (!serialRecv.ContainsKey (message)) {
                 serialRecv.Add (message, new List<GameObject> ());
             } 
-            serialRecv[message].Insert(0, obj);
+            if (!serialRecv[message].Contains (obj)) {
+                serialRecv[message].Insert(0, obj);
+            }
             UpdateDebug ();
         }
     }
