@@ -29,7 +29,7 @@ public class Dispatcher : MonoBehaviour {
     }
 
     public void Dispatch (string message, object parameter = null) {
-        if (serialRecv.ContainsKey (message)) {
+        if (serialRecv.ContainsKey (message) && serialRecv[message].Count > 0) {
             if (serialRecv[message][0] != null && serialRecv[message][0].activeSelf) {
                 serialRecv[message][0].SendMessage (message, parameter);
             } else {
