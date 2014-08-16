@@ -21,6 +21,8 @@ public class PriorityQueue<T> where T : new() {
 
     public void Clear () { 
         queueImpl.Clear ();
+        // blank initial because 0 index shouldn't be used.
+        queueImpl.Add (new T());
     }
 
     public bool Empty () {
