@@ -138,7 +138,12 @@ public class Pooler : MonoBehaviour {
             Debug.LogError ("Poolable hasn't been added to " + instance.name);
         }
         instance.gameObject.SetActive (false);
-        pooledInstances[pool.prefabIndex].Enqueue (instance);
+		if (pooledInstances[pool.prefabIndex] == null) {
+			// This case covers instances that exist in the scene
+			// but are returned before an InstantiateFromPool
+			pooledInstances[pool.prefabIndex] = new Queue<Transform>();
+		}
+		pooledInstances[pool.prefabIndex].Enqueue (instance);
     }
 
     IEnumerator TimedReturn (Transform instance, float time) {
