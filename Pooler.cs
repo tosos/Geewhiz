@@ -55,13 +55,13 @@ public class Pooler : MonoBehaviour {
         }
         // get the view id for the top level instance.
         NetworkViewID id = ViewFromPool (Network.player);
-        networkView.RPC ("RemoteInstance", RPCMode.OthersBuffered, index, pos, rot, id, Network.player);
+        GetComponent<NetworkView>().RPC ("RemoteInstance", RPCMode.OthersBuffered, index, pos, rot, id, Network.player);
         Transform inst = InstantiateInternal (index, pos, rot);
-        if (inst.networkView == null) {
+        if (inst.GetComponent<NetworkView>() == null) {
             NetworkView view = inst.gameObject.AddComponent<NetworkView>();
             view.stateSynchronization = NetworkStateSynchronization.Off;
         }
-        inst.networkView.viewID = id;
+        inst.GetComponent<NetworkView>().viewID = id;
         StartCoroutine (SetupViews (Network.player, inst));
         return inst;
     }
@@ -75,9 +75,9 @@ public class Pooler : MonoBehaviour {
     }
 
     public void NetworkReturnToPool (Transform instance) {
-        if (instance.networkView.isMine) {
-            NetworkViewID id = instance.networkView.viewID;
-            networkView.RPC ("RPCReturnID", RPCMode.AllBuffered, id);
+        if (instance.GetComponent<NetworkView>().isMine) {
+            NetworkViewID id = instance.GetComponent<NetworkView>().viewID;
+            GetComponent<NetworkView>().RPC ("RPCReturnID", RPCMode.AllBuffered, id);
         }
     }
 
@@ -115,11 +115,11 @@ public class Pooler : MonoBehaviour {
     [RPC]
     void RemoteInstance (int index, Vector3 pos, Quaternion rot, NetworkViewID id, NetworkPlayer sender) {
         Transform inst = InstantiateInternal (index, pos, rot);
-        if (inst.networkView == null) {
+        if (inst.GetComponent<NetworkView>() == null) {
             NetworkView view = inst.gameObject.AddComponent<NetworkView>();
             view.stateSynchronization = NetworkStateSynchronization.Off;
         }
-        inst.networkView.viewID = id;
+        inst.GetComponent<NetworkView>().viewID = id;
         StartCoroutine (SetupViews (sender, inst));
     }
 
@@ -166,7 +166,7 @@ public class Pooler : MonoBehaviour {
         semaphoreFillViewPool = true;
         while (pooledViewIDs[Network.player].Count < minPooledIds) {
             NetworkViewID viewID = Network.AllocateViewID ();
-            networkView.RPC ("AddViewID", RPCMode.All, viewID, Network.player);
+            GetComponent<NetworkView>().RPC ("AddViewID", RPCMode.All, viewID, Network.player);
             yield return new WaitForEndOfFrame ();
         }
         semaphoreFillViewPool = false;
@@ -201,7 +201,7 @@ public class Pooler : MonoBehaviour {
 
     public IEnumerator SetupViews (NetworkPlayer player, Transform inst) {
         foreach (NetworkView view in inst.GetComponentsInChildren<NetworkView>()) {
-            if (view == inst.networkView) {
+            if (view == inst.GetComponent<NetworkView>()) {
                 // skip the one attached to the main component.
                 continue;
             }

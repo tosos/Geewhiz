@@ -89,23 +89,23 @@ public class Dispatcher : MonoBehaviour {
     public void RemoteDispatch (string message, object parameter = null)
     {
         Dispatch (message, parameter);
-        if (Network.peerType != NetworkPeerType.Disconnected && networkView != null) {
+        if (Network.peerType != NetworkPeerType.Disconnected && GetComponent<NetworkView>() != null) {
             if (parameter == null) {
-                networkView.RPC ("RPCDispatchE", RPCMode.Others, message);
+                GetComponent<NetworkView>().RPC ("RPCDispatchE", RPCMode.Others, message);
             } else if (parameter is int) {
-                networkView.RPC ("RPCDispatchI", RPCMode.Others, message, parameter);
+                GetComponent<NetworkView>().RPC ("RPCDispatchI", RPCMode.Others, message, parameter);
             } else if (parameter is float) {
-                networkView.RPC ("RPCDispatchF", RPCMode.Others, message, parameter);
+                GetComponent<NetworkView>().RPC ("RPCDispatchF", RPCMode.Others, message, parameter);
             } else if (parameter is string) {
-                networkView.RPC ("RPCDispatchS", RPCMode.Others, message, parameter);
+                GetComponent<NetworkView>().RPC ("RPCDispatchS", RPCMode.Others, message, parameter);
             } else if (parameter is NetworkPlayer) {
-                networkView.RPC ("RPCDispatchP", RPCMode.Others, message, parameter);
+                GetComponent<NetworkView>().RPC ("RPCDispatchP", RPCMode.Others, message, parameter);
             } else if (parameter is NetworkViewID) {
-                networkView.RPC ("RPCDispatchID", RPCMode.Others, message, parameter);
+                GetComponent<NetworkView>().RPC ("RPCDispatchID", RPCMode.Others, message, parameter);
             } else if (parameter is Vector3) {
-                networkView.RPC ("RPCDispatchV", RPCMode.Others, message, parameter);
+                GetComponent<NetworkView>().RPC ("RPCDispatchV", RPCMode.Others, message, parameter);
             } else if (parameter is Quaternion) {
-                networkView.RPC ("RPCDispatchQ", RPCMode.Others, message, parameter);
+                GetComponent<NetworkView>().RPC ("RPCDispatchQ", RPCMode.Others, message, parameter);
             } else {
                 Debug.Log ("Can't dispatch a non RPCable parameter");
             }
@@ -115,26 +115,26 @@ public class Dispatcher : MonoBehaviour {
     public void RemoteDispatch (string message, NetworkPlayer player, object parameter = null)
     {
         if (Network.peerType != NetworkPeerType.Disconnected) {
-            if (networkView == null) {
+            if (GetComponent<NetworkView>() == null) {
                 Debug.LogError ("Cannot remote dispatch.  " +
                     "Need to attach a networkView to the Hub where Dispatch is attached");
             } else {
                 if (parameter == null) {
-                    networkView.RPC ("RPCDispatchE", player, message);
+                    GetComponent<NetworkView>().RPC ("RPCDispatchE", player, message);
                 } else if (parameter is int) {
-                    networkView.RPC ("RPCDispatchI", player, message, parameter);
+                    GetComponent<NetworkView>().RPC ("RPCDispatchI", player, message, parameter);
                 } else if (parameter is float) {
-                    networkView.RPC ("RPCDispatchF", player, message, parameter);
+                    GetComponent<NetworkView>().RPC ("RPCDispatchF", player, message, parameter);
                 } else if (parameter is string) {
-                    networkView.RPC ("RPCDispatchS", player, message, parameter);
+                    GetComponent<NetworkView>().RPC ("RPCDispatchS", player, message, parameter);
                 } else if (parameter is NetworkPlayer) {
-                    networkView.RPC ("RPCDispatchP", player, message, parameter);
+                    GetComponent<NetworkView>().RPC ("RPCDispatchP", player, message, parameter);
                 } else if (parameter is NetworkViewID) {
-                    networkView.RPC ("RPCDispatchID", player, message, parameter);
+                    GetComponent<NetworkView>().RPC ("RPCDispatchID", player, message, parameter);
                 } else if (parameter is Vector3) {
-                    networkView.RPC ("RPCDispatchV", player, message, parameter);
+                    GetComponent<NetworkView>().RPC ("RPCDispatchV", player, message, parameter);
                 } else if (parameter is Quaternion) {
-                    networkView.RPC ("RPCDispatchQ", player, message, parameter);
+                    GetComponent<NetworkView>().RPC ("RPCDispatchQ", player, message, parameter);
                 } else {
                     Debug.Log ("Can't dispatch a non RPCable parameter");
                 }
@@ -172,10 +172,10 @@ public class Dispatcher : MonoBehaviour {
     }
 
     void UpdateDebug () {
-        if (debugMessage != "" && guiText != null) {
-            guiText.text = "";
+        if (debugMessage != "" && GetComponent<GUIText>() != null) {
+            GetComponent<GUIText>().text = "";
             foreach (GameObject go in serialRecv[debugMessage]) {
-                guiText.text += go.name + "\n";
+                GetComponent<GUIText>().text += go.name + "\n";
             }
         }
     }
