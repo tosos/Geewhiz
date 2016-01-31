@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Networking;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -6,8 +7,20 @@ public class Pooler : MonoBehaviour {
 
     public Transform[] poolablePrefabs;
     private Queue<Transform>[] pooledInstances;
-    private Dictionary<NetworkPlayer, Queue<NetworkViewID> > pooledViewIDs;
+    // private Dictionary<NetworkPlayer, Queue<NetworkViewID> > pooledViewIDs;
+	private Dictionary<NetworkHash128, int> assetIdToIndex;
     public int minPooledIds = 5;
+
+	private const short RemoteInstanceMsg = 1010;
+    public class RemoteInstanceMessage : MessageBase
+    {
+        public int index;
+        public Vector3 position;
+        public Quaternion rotation;
+    }
+
+	private NetworkClient client;
+	private List<Transform> localInstances;
 
     static private Pooler _instance = null;
     static public Pooler instance {
@@ -26,17 +39,44 @@ public class Pooler : MonoBehaviour {
         _instance = this;
 
         pooledInstances = new Queue<Transform>[poolablePrefabs.Length];
+/*
         pooledViewIDs = new Dictionary<NetworkPlayer, Queue<NetworkViewID> >();
-
         pooledViewIDs[Network.player] = new Queue<NetworkViewID> ();
+
         if (Network.peerType != NetworkPeerType.Disconnected) {
             StartCoroutine (FillViewPool ());
         }
+*/
+		assetIdToIndex = new Dictionary<NetworkHash128, int> ();
+		for (int i = 0; i < poolablePrefabs.Length; i ++) {
+			NetworkHash128 assetId = poolablePrefabs[i].GetComponent<NetworkIdentity>().assetId;
+			ClientScene.RegisterSpawnHandler (assetId, SpawnPoolable, UnspawnPoolable);
+			assetIdToIndex[assetId] = i;
+		}
+
+		// These are used to hold instances we create until we hear back from the server
+		localInstances = new List<Transform> ();
+
+		if (NetworkServer.active) {
+			NetworkServer.RegisterHandler (RemoteInstanceMsg, ReceiveRemoteInstanceFromClient);
+		}
     }
 
     void OnDestroy () {
         _instance = null;
+		for (int i = 0; i < poolablePrefabs.Length; i ++) {
+			NetworkHash128 assetId = poolablePrefabs[i].GetComponent<NetworkIdentity>().assetId;
+			ClientScene.UnregisterSpawnHandler (assetId);
+		}
     }
+
+	public void SetupClientConnection (NetworkClient c) {
+		client = c;
+	} 
+
+	public void RemoveClientConnection () {
+		client = null;
+	}
 
     public Transform InstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot) {
         int index = PrefabIndex (prefab);
@@ -53,44 +93,69 @@ public class Pooler : MonoBehaviour {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
-        // get the view id for the top level instance.
-        NetworkViewID id = ViewFromPool (Network.player);
-        GetComponent<NetworkView>().RPC ("RemoteInstance", RPCMode.OthersBuffered, index, pos, rot, id, Network.player);
         Transform inst = InstantiateInternal (index, pos, rot);
-        if (inst.GetComponent<NetworkView>() == null) {
-            NetworkView view = inst.gameObject.AddComponent<NetworkView>();
-            view.stateSynchronization = NetworkStateSynchronization.Off;
-        }
-        inst.GetComponent<NetworkView>().viewID = id;
-        StartCoroutine (SetupViews (Network.player, inst));
+		if (NetworkServer.active) {
+			NetworkServer.Spawn(inst.gameObject);
+		} else if (client != null) {
+			localInstances.Add (inst);
+			SendRemoteInstanceToServer (index, pos, rot);
+		}
         return inst;
     }
 
-    public void ReturnToPool (Transform instance) {
-        StartCoroutine (DelayedReturn (instance));
+    public void ReturnToPool (Transform instance, float time = 0.0f) {
+		if (NetworkServer.active || client == null) {
+			if (time > 0) {
+        		StartCoroutine (TimedReturn (instance, time));
+			} else {
+        		StartCoroutine (DelayedReturn (instance));
+			}
+			NetworkServer.UnSpawn (instance.gameObject);
+		} else {
+			Debug.LogWarning ("Return to pool should only be called by the server or if offline");
+		}
     }
 
-    public void ReturnToPool (Transform instance, float time) {
-        StartCoroutine (TimedReturn (instance, time));
+	private GameObject SpawnPoolable (Vector3 position, NetworkHash128 assetId) {
+		for (int i = 0; i < localInstances.Count; i ++) {
+			if (localInstances[i].position == position && 
+				localInstances[i].GetComponent<NetworkIdentity>().assetId.ToString() == assetId.ToString()) 
+			{
+				if (i > 0) {
+					Debug.LogWarning ("The local instance we found as not the first one.  That's odd.");
+				}
+				Transform inst = localInstances[i];
+				localInstances.RemoveAt (i);
+				return inst.gameObject;
+			}
+		}
+
+		// Not one of ours
+		Transform newInst = InstantiateInternal (assetIdToIndex[assetId], position, Quaternion.identity);
+		return newInst.gameObject;
+	}
+
+	private void UnspawnPoolable (GameObject go) {
+		// Have we already retpooled this one?  If not then we need to 
+		if (go.activeSelf) {
+			StartCoroutine (DelayedReturn (go.transform));
+		}
+	}
+
+    private int PrefabIndex (Transform prefab) {
+		NetworkIdentity id = prefab.GetComponent<NetworkIdentity>();
+		if (id != null) {
+			return assetIdToIndex[id.assetId];
+		}
+		for (int i = 0; i < poolablePrefabs.Length; i ++) {
+			if (prefab == poolablePrefabs[i]) {
+				return i;
+			}
+		}
+		return -1;
     }
 
-    public void NetworkReturnToPool (Transform instance) {
-        if (instance.GetComponent<NetworkView>().isMine) {
-            NetworkViewID id = instance.GetComponent<NetworkView>().viewID;
-            GetComponent<NetworkView>().RPC ("RPCReturnID", RPCMode.AllBuffered, id);
-        }
-    }
-
-    int PrefabIndex (Transform prefab) {
-        for (int i = 0; i < poolablePrefabs.Length; i ++) {
-            if (poolablePrefabs[i] == prefab) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    Transform InstantiateInternal (int index, Vector3 pos, Quaternion rot) {
+    private Transform InstantiateInternal (int index, Vector3 pos, Quaternion rot) {
         Transform inst;
         if (pooledInstances[index] == null) {
             pooledInstances[index] = new Queue<Transform>();
@@ -112,31 +177,38 @@ public class Pooler : MonoBehaviour {
         return inst;
     }
 
-    [RPC]
-    void RemoteInstance (int index, Vector3 pos, Quaternion rot, NetworkViewID id, NetworkPlayer sender) {
+	private void SendRemoteInstanceToServer (int index, Vector3 pos, Quaternion rot) {
+		RemoteInstanceMessage msg = new RemoteInstanceMessage ();
+		msg.index = index;
+		msg.position = pos;
+		msg.rotation = rot;
+		client.Send (RemoteInstanceMsg, msg);	
+	}
+
+	private void ReceiveRemoteInstanceFromClient (NetworkMessage msg) {
+		RemoteInstanceMessage instMsg = msg.ReadMessage<RemoteInstanceMessage>();
+		RemoteInstance (instMsg.index, instMsg.position, instMsg.rotation);
+	}
+
+    private void RemoteInstance (int index, Vector3 pos, Quaternion rot) {
         Transform inst = InstantiateInternal (index, pos, rot);
-        if (inst.GetComponent<NetworkView>() == null) {
-            NetworkView view = inst.gameObject.AddComponent<NetworkView>();
-            view.stateSynchronization = NetworkStateSynchronization.Off;
-        }
-        inst.GetComponent<NetworkView>().viewID = id;
-        StartCoroutine (SetupViews (sender, inst));
+		NetworkServer.Spawn (inst.gameObject);
+    }
+
+    IEnumerator TimedReturn (Transform instance, float time) {
+        yield return new WaitForSeconds (time);
+        StartCoroutine (DelayedReturn (instance));
     }
 
     IEnumerator DelayedReturn (Transform instance) {
         yield return new WaitForEndOfFrame ();
-        instance.BroadcastMessage ("PoolReturn", SendMessageOptions.DontRequireReceiver);
         instance.parent = transform;
-        foreach (NetworkView view in instance.GetComponentsInChildren<NetworkView>()) {
-            if (view.viewID != NetworkViewID.unassigned) {
-                ViewToPool (view.viewID);
-                view.viewID = NetworkViewID.unassigned;
-            }
-        }
+
         Poolable pool = instance.GetComponent<Poolable>();
         if (!pool) {
             Debug.LogError ("Poolable hasn't been added to " + instance.name);
         }
+		pool.Return ();
         instance.gameObject.SetActive (false);
 		if (pooledInstances[pool.prefabIndex] == null) {
 			// This case covers instances that exist in the scene
@@ -145,75 +217,4 @@ public class Pooler : MonoBehaviour {
 		}
 		pooledInstances[pool.prefabIndex].Enqueue (instance);
     }
-
-    IEnumerator TimedReturn (Transform instance, float time) {
-        yield return new WaitForSeconds (time);
-        StartCoroutine (DelayedReturn (instance));
-    }
-
-    [RPC]
-    void RPCReturnID (NetworkViewID id) {
-        NetworkView view = NetworkView.Find (id);
-        Transform instance = view.transform;
-        StartCoroutine (DelayedReturn (instance));
-    }
-
-    private bool semaphoreFillViewPool = false;
-    IEnumerator FillViewPool () {
-        if (semaphoreFillViewPool) {
-            yield break;
-        }
-        semaphoreFillViewPool = true;
-        while (pooledViewIDs[Network.player].Count < minPooledIds) {
-            NetworkViewID viewID = Network.AllocateViewID ();
-            GetComponent<NetworkView>().RPC ("AddViewID", RPCMode.All, viewID, Network.player);
-            yield return new WaitForEndOfFrame ();
-        }
-        semaphoreFillViewPool = false;
-    }
-
-    [RPC]
-    void AddViewID (NetworkViewID viewID, NetworkPlayer sender) {
-        if (!pooledViewIDs.ContainsKey (sender)) {
-            pooledViewIDs[sender] = new Queue<NetworkViewID> ();
-        }
-        pooledViewIDs[sender].Enqueue (viewID);
-    }
-
-    NetworkViewID ViewFromPool (NetworkPlayer player) {
-        NetworkViewID ret;
-        if (pooledViewIDs[player].Count == 0) {
-            ret = NetworkViewID.unassigned;
-        } else {
-            ret = pooledViewIDs[player].Dequeue ();
-        }
-        if (Network.player == player && pooledViewIDs[player].Count < minPooledIds) {
-            StartCoroutine (FillViewPool ());
-        }
-        return ret;
-    }
-
-    void ViewToPool (NetworkViewID viewID) {
-        /* Can't do this.  viewID.owner is the wrong thing 
-        pooledViewIDs[viewID.owner].Enqueue (viewID);        
-        */
-    }
-
-    public IEnumerator SetupViews (NetworkPlayer player, Transform inst) {
-        foreach (NetworkView view in inst.GetComponentsInChildren<NetworkView>()) {
-            if (view == inst.GetComponent<NetworkView>()) {
-                // skip the one attached to the main component.
-                continue;
-            }
-            NetworkViewID id = ViewFromPool (player);
-            while (id == NetworkViewID.unassigned) {
-                Debug.LogError ("Having to wait on Ids.  minPooledIds must be increased");
-                yield return new WaitForSeconds (0.5f);
-                id = ViewFromPool (player);
-            }
-            view.viewID = id;
-        }
-        yield break;
-    }
-
 }

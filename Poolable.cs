@@ -14,8 +14,8 @@ public class Poolable : MonoBehaviour {
         }
     }
 
-    // PoolStart is here, but PoolReturn is called in Pooler
-    void PoolReturn () {
+    public void Return () {
+        BroadcastMessage ("PoolReturn", SendMessageOptions.DontRequireReceiver);
         needsStart = true;
         enabled = true;
 
