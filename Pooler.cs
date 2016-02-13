@@ -7,9 +7,10 @@ public class Pooler : MonoBehaviour {
 
     public Transform[] poolablePrefabs;
     private Queue<Transform>[] pooledInstances;
-    // private Dictionary<NetworkPlayer, Queue<NetworkViewID> > pooledViewIDs;
 	private Dictionary<NetworkHash128, int> assetIdToIndex;
     public int minPooledIds = 5;
+
+	public delegate void NetworkInstantiateDelegate (Transform inst);
 
 	private const short RemoteInstanceMsg = 1010;
     public class RemoteInstanceMessage : MessageBase
@@ -21,6 +22,7 @@ public class Pooler : MonoBehaviour {
 
 	private NetworkClient client;
 	private List<Transform> localInstances;
+	private List<NetworkInstantiateDelegate> callbacks;
 
     static private Pooler _instance = null;
     static public Pooler instance {
@@ -39,14 +41,7 @@ public class Pooler : MonoBehaviour {
         _instance = this;
 
         pooledInstances = new Queue<Transform>[poolablePrefabs.Length];
-/*
-        pooledViewIDs = new Dictionary<NetworkPlayer, Queue<NetworkViewID> >();
-        pooledViewIDs[Network.player] = new Queue<NetworkViewID> ();
 
-        if (Network.peerType != NetworkPeerType.Disconnected) {
-            StartCoroutine (FillViewPool ());
-        }
-*/
 		assetIdToIndex = new Dictionary<NetworkHash128, int> ();
 		for (int i = 0; i < poolablePrefabs.Length; i ++) {
 			NetworkHash128 assetId = poolablePrefabs[i].GetComponent<NetworkIdentity>().assetId;
@@ -56,6 +51,7 @@ public class Pooler : MonoBehaviour {
 
 		// These are used to hold instances we create until we hear back from the server
 		localInstances = new List<Transform> ();
+		callbacks = new List<NetworkInstantiateDelegate> ();
 
 		if (NetworkServer.active) {
 			NetworkServer.RegisterHandler (RemoteInstanceMsg, ReceiveRemoteInstanceFromClient);
@@ -87,7 +83,7 @@ public class Pooler : MonoBehaviour {
         return InstantiateInternal (index, pos, rot);
     }
 
-    public Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot) {
+    public Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, NetworkInstantiateDelegate func  = null) {
         int index = PrefabIndex (prefab);
         if (index < 0) {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
@@ -98,6 +94,7 @@ public class Pooler : MonoBehaviour {
 			NetworkServer.Spawn(inst.gameObject);
 		} else if (client != null) {
 			localInstances.Add (inst);
+			callbacks.Add (func);
 			SendRemoteInstanceToServer (index, pos, rot);
 		}
         return inst;
@@ -126,6 +123,10 @@ public class Pooler : MonoBehaviour {
 				}
 				Transform inst = localInstances[i];
 				localInstances.RemoveAt (i);
+				if (callbacks[i] != null) {
+					callbacks[i](inst);
+				}
+				callbacks.RemoveAt (i);
 				return inst.gameObject;
 			}
 		}
