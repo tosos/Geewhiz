@@ -68,6 +68,14 @@ public class Dispatcher : MonoBehaviour {
 			NetworkServer.RegisterHandler (DispatchSMessageId, DispatchSMessage);
 			NetworkServer.RegisterHandler (DispatchVMessageId, DispatchVMessage);
 			NetworkServer.RegisterHandler (DispatchQMessageId, DispatchQMessage);
+		} else if (NetworkClient.active) {
+			NetworkClient client = NetworkClient.allClients[0];
+			client.RegisterHandler (DispatchEMessageId, DispatchEMessage);
+			client.RegisterHandler (DispatchIMessageId, DispatchIMessage);
+			client.RegisterHandler (DispatchFMessageId, DispatchFMessage);
+			client.RegisterHandler (DispatchSMessageId, DispatchSMessage);
+			client.RegisterHandler (DispatchVMessageId, DispatchVMessage);
+			client.RegisterHandler (DispatchQMessageId, DispatchQMessage);
 		}
     }
 
@@ -80,23 +88,8 @@ public class Dispatcher : MonoBehaviour {
 			NetworkServer.UnregisterHandler (DispatchSMessageId);
 			NetworkServer.UnregisterHandler (DispatchVMessageId);
 			NetworkServer.UnregisterHandler (DispatchQMessageId);
-		}
-    }
-
-	private NetworkClient client;
-
-	public void SetupClientConnection (NetworkClient c) {
-		client = c;
-		client.RegisterHandler (DispatchEMessageId, DispatchEMessage);
-		client.RegisterHandler (DispatchIMessageId, DispatchIMessage);
-		client.RegisterHandler (DispatchFMessageId, DispatchFMessage);
-		client.RegisterHandler (DispatchSMessageId, DispatchSMessage);
-		client.RegisterHandler (DispatchVMessageId, DispatchVMessage);
-		client.RegisterHandler (DispatchQMessageId, DispatchQMessage);
-	}
-
-	public void RemoveClientConnection () {
-		if (client != null) {
+		} else if (NetworkClient.active) {
+			NetworkClient client = NetworkClient.allClients[0];
 			client.UnregisterHandler (DispatchEMessageId);
 			client.UnregisterHandler (DispatchIMessageId);
 			client.UnregisterHandler (DispatchFMessageId);
@@ -104,8 +97,36 @@ public class Dispatcher : MonoBehaviour {
 			client.UnregisterHandler (DispatchVMessageId);
 			client.UnregisterHandler (DispatchQMessageId);
 		}
-		client = null;
-	}
+    }
+
+    public void Register (string message, GameObject obj, bool isParallel = true) {
+        if (isParallel) {
+            if (!parallelRecv.ContainsKey (message)) {
+                parallelRecv.Add (message, new List<GameObject> ());
+            } 
+            if (!parallelRecv[message].Contains (obj)) { 
+                parallelRecv[message].Add(obj);
+            }
+        } else {
+            if (!serialRecv.ContainsKey (message)) {
+                serialRecv.Add (message, new List<GameObject> ());
+            } 
+            if (!serialRecv[message].Contains (obj)) {
+                serialRecv[message].Insert(0, obj);
+            }
+            UpdateDebug ();
+        }
+    }
+
+    public void Unregister (string message, GameObject obj) {
+        if (parallelRecv.ContainsKey (message)) {
+            parallelRecv[message].Remove (obj);
+        }
+        if (serialRecv.ContainsKey (message)) {
+            serialRecv[message].Remove (obj);
+            UpdateDebug ();
+        }
+    }
 
     public void Dispatch (string message, object parameter = null) {
         if (serialRecv.ContainsKey (message) && serialRecv[message].Count > 0) {
@@ -213,43 +234,11 @@ public class Dispatcher : MonoBehaviour {
 		if (msg == null) return;
 		if (NetworkServer.active) {
 			NetworkServer.SendToAll (id, msg);
-		} else if (client != null) {
-			client.Send (id, msg);
+		} else if (NetworkClient.active) {
+			NetworkClient.allClients[0].Send (id, msg);
 		}
     }
 
-
-/* TODO
-    public void RemoteDispatch (string message, NetworkPlayer player, object parameter = null)
-    {
-        if (Network.peerType != NetworkPeerType.Disconnected) {
-            if (GetComponent<NetworkView>() == null) {
-                Debug.LogError ("Cannot remote dispatch.  " +
-                    "Need to attach a networkView to the Hub where Dispatch is attached");
-            } else {
-                if (parameter == null) {
-                    GetComponent<NetworkView>().RPC ("RPCDispatchE", player, message);
-                } else if (parameter is int) {
-                    GetComponent<NetworkView>().RPC ("RPCDispatchI", player, message, parameter);
-                } else if (parameter is float) {
-                    GetComponent<NetworkView>().RPC ("RPCDispatchF", player, message, parameter);
-                } else if (parameter is string) {
-                    GetComponent<NetworkView>().RPC ("RPCDispatchS", player, message, parameter);
-                } else if (parameter is NetworkPlayer) {
-                    GetComponent<NetworkView>().RPC ("RPCDispatchP", player, message, parameter);
-                } else if (parameter is NetworkViewID) {
-                    GetComponent<NetworkView>().RPC ("RPCDispatchID", player, message, parameter);
-                } else if (parameter is Vector3) {
-                    GetComponent<NetworkView>().RPC ("RPCDispatchV", player, message, parameter);
-                } else if (parameter is Quaternion) {
-                    GetComponent<NetworkView>().RPC ("RPCDispatchQ", player, message, parameter);
-                } else {
-                    Debug.Log ("Can't dispatch a non RPCable parameter");
-                }
-            }
-        }
-    }
-*/
 	private MessageBase ParseParameterToMessage (string message, object parameter, out short id) {
 		MessageBase msgToSend = null;
         if (parameter == null) {
@@ -293,35 +282,6 @@ public class Dispatcher : MonoBehaviour {
         }
 		return msgToSend;
 	}
-
-    public void Register (string message, GameObject obj, bool isParallel = true) {
-        if (isParallel) {
-            if (!parallelRecv.ContainsKey (message)) {
-                parallelRecv.Add (message, new List<GameObject> ());
-            } 
-            if (!parallelRecv[message].Contains (obj)) { 
-                parallelRecv[message].Add(obj);
-            }
-        } else {
-            if (!serialRecv.ContainsKey (message)) {
-                serialRecv.Add (message, new List<GameObject> ());
-            } 
-            if (!serialRecv[message].Contains (obj)) {
-                serialRecv[message].Insert(0, obj);
-            }
-            UpdateDebug ();
-        }
-    }
-
-    public void Unregister (string message, GameObject obj) {
-        if (parallelRecv.ContainsKey (message)) {
-            parallelRecv[message].Remove (obj);
-        }
-        if (serialRecv.ContainsKey (message)) {
-            serialRecv[message].Remove (obj);
-            UpdateDebug ();
-        }
-    }
 
     void UpdateDebug () {
         if (debugMessage != "" && GetComponent<GUIText>() != null) {
