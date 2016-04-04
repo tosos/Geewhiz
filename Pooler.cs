@@ -41,6 +41,7 @@ public class Pooler : MonoBehaviour {
         _instance = this;
 
         pooledInstances = new Queue<Transform>[poolablePrefabs.Length];
+		// TODO allow pre-warming the instances
 
 		assetIdToIndex = new Dictionary<NetworkHash128, int> ();
 		for (int i = 0; i < poolablePrefabs.Length; i ++) {
@@ -168,6 +169,12 @@ public class Pooler : MonoBehaviour {
                 pool = inst.gameObject.AddComponent<Poolable>();
             }
             pool.prefabIndex = index;
+			if (!NetworkServer.active) {
+				Visuals visuals = inst.GetComponent<Visuals>();
+				if (visuals != null) {
+					visuals.LoadVisuals ();
+				}
+			}
         } else {
             inst = pooledInstances[index].Dequeue ();
         }
