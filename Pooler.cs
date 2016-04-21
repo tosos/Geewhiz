@@ -190,7 +190,7 @@ public class Pooler : MonoBehaviour {
 		msg.index = index;
 		msg.position = pos;
 		msg.rotation = rot;
-		client.Send (RemoteInstanceMsg, msg);	
+		client.SendByChannel (RemoteInstanceMsg, msg, 0);
 	}
 
 	private void ReceiveRemoteInstanceFromClient (NetworkMessage msg) {

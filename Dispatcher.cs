@@ -153,7 +153,7 @@ public class Dispatcher : MonoBehaviour {
 			// Send it to everyone but the sender
 			for (int i = 0; i < NetworkServer.connections.Count; i ++) {
 				if (NetworkServer.connections[i] != null && NetworkServer.connections[i] != msg.conn) {
-					NetworkServer.SendToClient (NetworkServer.connections[i].connectionId, DispatchEMessageId, emsg);
+					NetworkServer.connections[i].SendByChannel (DispatchEMessageId, emsg, 0);
 				}
 			}
 		}
@@ -166,7 +166,7 @@ public class Dispatcher : MonoBehaviour {
 			// Send it to everyone but the sender
 			for (int i = 0; i < NetworkServer.connections.Count; i ++) {
 				if (NetworkServer.connections[i] != null && NetworkServer.connections[i] != msg.conn) {
-					NetworkServer.SendToClient (NetworkServer.connections[i].connectionId, DispatchIMessageId, imsg);
+					NetworkServer.connections[i].SendByChannel (DispatchIMessageId, imsg, 0);
 				}
 			}
 		}
@@ -179,7 +179,7 @@ public class Dispatcher : MonoBehaviour {
 			// Send it to everyone but the sender
 			for (int i = 0; i < NetworkServer.connections.Count; i ++) {
 				if (NetworkServer.connections[i] != null && NetworkServer.connections[i] != msg.conn) {
-					NetworkServer.SendToClient (NetworkServer.connections[i].connectionId, DispatchFMessageId, fmsg);
+					NetworkServer.connections[i].SendByChannel (DispatchFMessageId, fmsg, 0);
 				}
 			}
 		}
@@ -192,7 +192,7 @@ public class Dispatcher : MonoBehaviour {
 			// Send it to everyone but the sender
 			for (int i = 0; i < NetworkServer.connections.Count; i ++) {
 				if (NetworkServer.connections[i] != null && NetworkServer.connections[i] != msg.conn) {
-					NetworkServer.SendToClient (NetworkServer.connections[i].connectionId, DispatchSMessageId, smsg);
+					NetworkServer.connections[i].SendByChannel (DispatchSMessageId, smsg, 0);
 				}
 			}
 		}
@@ -205,7 +205,7 @@ public class Dispatcher : MonoBehaviour {
 			// Send it to everyone but the sender
 			for (int i = 0; i < NetworkServer.connections.Count; i ++) {
 				if (NetworkServer.connections[i] != null && NetworkServer.connections[i] != msg.conn) {
-					NetworkServer.SendToClient (NetworkServer.connections[i].connectionId, DispatchVMessageId, vmsg);
+					NetworkServer.connections[i].SendByChannel (DispatchVMessageId, vmsg, 0);
 				}
 			}
 		}
@@ -218,7 +218,7 @@ public class Dispatcher : MonoBehaviour {
 			// Send it to everyone but the sender
 			for (int i = 0; i < NetworkServer.connections.Count; i ++) {
 				if (NetworkServer.connections[i] != null && NetworkServer.connections[i] != msg.conn) {
-					NetworkServer.SendToClient (NetworkServer.connections[i].connectionId, DispatchQMessageId, qmsg);
+					NetworkServer.connections[i].SendByChannel (DispatchQMessageId, qmsg, 0);
 				}
 			}
 		}
@@ -233,9 +233,9 @@ public class Dispatcher : MonoBehaviour {
 		MessageBase msg = ParseParameterToMessage (message, parameter, out id);
 		if (msg == null) return;
 		if (NetworkServer.active) {
-			NetworkServer.SendToAll (id, msg);
+			NetworkServer.SendByChannelToAll (id, msg, 0);
 		} else if (NetworkClient.active) {
-			NetworkClient.allClients[0].Send (id, msg);
+			NetworkClient.allClients[0].SendByChannel (id, msg, 0);
 		}
     }
 
