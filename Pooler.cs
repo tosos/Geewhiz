@@ -5,6 +5,9 @@ using System.Collections.Generic;
 
 public class Pooler : MonoBehaviour {
 
+	public delegate void OnPoolInstantiated (Transform instance);
+	public event OnPoolInstantiated onPoolInstantiated;
+
     public Transform[] poolablePrefabs;
     private Queue<Transform>[] pooledInstances;
 	private Dictionary<NetworkHash128, int> assetIdToIndex;
@@ -16,11 +19,13 @@ public class Pooler : MonoBehaviour {
     public class RemoteInstanceMessage : MessageBase
     {
         public int index;
+		public string tag;
+		public int layer;
         public Vector3 position;
         public Quaternion rotation;
     }
+	private List<RemoteInstanceMessage> queuedInstances;
 
-	private NetworkClient client;
 	private List<Transform> localInstances;
 	private List<NetworkInstantiateDelegate> callbacks;
 
@@ -33,6 +38,11 @@ public class Pooler : MonoBehaviour {
             return _instance;
         }
     }
+
+	public Transform GetPrefab (Transform inst) {
+		Poolable pool = inst.GetComponent<Poolable> ();	
+		return pool != null ? poolablePrefabs[pool.prefabIndex] : null;
+	}
 
     void Awake () {
         if (_instance != null) {
@@ -53,9 +63,14 @@ public class Pooler : MonoBehaviour {
 		// These are used to hold instances we create until we hear back from the server
 		localInstances = new List<Transform> ();
 		callbacks = new List<NetworkInstantiateDelegate> ();
+		queuedInstances = new List<RemoteInstanceMessage> ();
 
 		if (NetworkServer.active) {
 			NetworkServer.RegisterHandler (RemoteInstanceMsg, ReceiveRemoteInstanceFromClient);
+		}
+
+		if (NetworkClient.active) {
+			NetworkManager.singleton.client.RegisterHandler (RemoteInstanceMsg, ReceiveRemoteInstanceFromServer);
 		}
     }
 
@@ -67,21 +82,13 @@ public class Pooler : MonoBehaviour {
 		}
     }
 
-	public void SetupClientConnection (NetworkClient c) {
-		client = c;
-	} 
-
-	public void RemoveClientConnection () {
-		client = null;
-	}
-
     public Transform InstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot) {
         int index = PrefabIndex (prefab);
         if (index < 0) {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
-        return InstantiateInternal (index, pos, rot);
+        return InstantiateInternal (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
     }
 
     public Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, NetworkInstantiateDelegate func  = null) {
@@ -90,27 +97,31 @@ public class Pooler : MonoBehaviour {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
-        Transform inst = InstantiateInternal (index, pos, rot);
+        Transform inst = InstantiateInternal (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
 		if (NetworkServer.active) {
+			if (inst.GetComponent<NetworkIdentity>() == null) {
+				Debug.LogError ("pooler Trying to instantiate a prefab " + prefab.gameObject.name + " without id", prefab);
+			}
+			Debug.Log ("pooler Sending RPC " + PrefabIndex(prefab) + " at " + pos);
+			
+			SendRemoteInstanceToClients (PrefabIndex(prefab), prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
 			NetworkServer.Spawn(inst.gameObject);
-		} else if (client != null) {
+		} else if (NetworkClient.active != null) {
 			localInstances.Add (inst);
 			callbacks.Add (func);
-			SendRemoteInstanceToServer (index, pos, rot);
+			SendRemoteInstanceToServer (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
 		}
         return inst;
     }
 
     public void ReturnToPool (Transform instance, float time = 0.0f) {
-		if (NetworkServer.active || client == null) {
-			if (time > 0) {
-        		StartCoroutine (TimedReturn (instance, time));
-			} else {
-        		StartCoroutine (DelayedReturn (instance));
-			}
-			NetworkServer.UnSpawn (instance.gameObject);
+		if (time > 0) {
+       		StartCoroutine (TimedReturn (instance, time));
 		} else {
-			Debug.LogWarning ("Return to pool should only be called by the server or if offline");
+       		StartCoroutine (DelayedReturn (instance));
+		}
+		if (NetworkServer.active) {
+			NetworkServer.UnSpawn (instance.gameObject);
 		}
     }
 
@@ -132,9 +143,17 @@ public class Pooler : MonoBehaviour {
 			}
 		}
 
-		// Not one of ours
-		Transform newInst = InstantiateInternal (assetIdToIndex[assetId], position, Quaternion.identity);
-		return newInst.gameObject;
+		Debug.Log ("pooler Looking for " + assetIdToIndex[assetId] + " at " + position);
+		for (int i = 0; i < queuedInstances.Count; i ++) {
+			// Debug.Log ("queuedInfo " + assetIdToIndex[assetId] + " at " + queuedInfo[i].position);
+			if (queuedInstances[i].index == assetIdToIndex[assetId] && queuedInstances[i].position == position) {
+				Transform newInst = InstantiateInternal (assetIdToIndex[assetId], queuedInstances[i].tag, queuedInstances[i].layer, position, Quaternion.identity);
+				return newInst.gameObject;
+			}
+		}
+
+		Debug.LogWarning ("No queued info available for Spawned prefab");
+		return null;
 	}
 
 	private void UnspawnPoolable (GameObject go) {
@@ -157,7 +176,7 @@ public class Pooler : MonoBehaviour {
 		return -1;
     }
 
-    private Transform InstantiateInternal (int index, Vector3 pos, Quaternion rot) {
+    private Transform InstantiateInternal (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
         Transform inst;
         if (pooledInstances[index] == null) {
             pooledInstances[index] = new Queue<Transform>();
@@ -169,6 +188,7 @@ public class Pooler : MonoBehaviour {
                 pool = inst.gameObject.AddComponent<Poolable>();
             }
             pool.prefabIndex = index;
+			// Do this here so that it happens before the pool start
 			if (!NetworkServer.active) {
 				Visuals visuals = inst.GetComponent<Visuals>();
 				if (visuals != null) {
@@ -179,28 +199,55 @@ public class Pooler : MonoBehaviour {
             inst = pooledInstances[index].Dequeue ();
         }
         inst.parent = null;
+		inst.gameObject.tag = tag;
+		inst.gameObject.layer = layer;
         inst.position = pos;
         inst.rotation = rot;
         inst.gameObject.SetActive (true);
+
+		if (onPoolInstantiated != null)
+			onPoolInstantiated (inst);
         return inst;
     }
 
-	private void SendRemoteInstanceToServer (int index, Vector3 pos, Quaternion rot) {
+	private void SendRemoteInstanceToServer (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
+		Debug.Log ("pooler Sending remote instance to the server");
 		RemoteInstanceMessage msg = new RemoteInstanceMessage ();
 		msg.index = index;
+		msg.tag = tag;
+		msg.layer = layer;
 		msg.position = pos;
 		msg.rotation = rot;
-		client.SendByChannel (RemoteInstanceMsg, msg, 0);
+		NetworkManager.singleton.client.SendByChannel (RemoteInstanceMsg, msg, 0);
 	}
 
 	private void ReceiveRemoteInstanceFromClient (NetworkMessage msg) {
+		Debug.Log ("Received a remote intance from the client");
 		RemoteInstanceMessage instMsg = msg.ReadMessage<RemoteInstanceMessage>();
-		RemoteInstance (instMsg.index, instMsg.position, instMsg.rotation);
+		RemoteInstance (msg.conn, instMsg);
 	}
 
-    private void RemoteInstance (int index, Vector3 pos, Quaternion rot) {
-        Transform inst = InstantiateInternal (index, pos, rot);
-		NetworkServer.Spawn (inst.gameObject);
+	private void SendRemoteInstanceToClients (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
+		RemoteInstanceMessage msg = new RemoteInstanceMessage ();
+		msg.index = index;
+		msg.tag = tag;
+		msg.layer = layer;
+		msg.position = pos;
+		msg.rotation = rot;
+		NetworkServer.SendByChannelToAll (RemoteInstanceMsg, msg, 0);
+	}
+
+	private void ReceiveRemoteInstanceFromServer (NetworkMessage msg) {
+		Debug.Log ("Received a remote intance from the client");
+		RemoteInstanceMessage queuedInst = msg.ReadMessage<RemoteInstanceMessage>();
+		queuedInstances.Add (queuedInst);
+	}
+
+
+    private void RemoteInstance (NetworkConnection conn, RemoteInstanceMessage msg) {
+        Transform inst = InstantiateInternal (msg.index, msg.tag, msg.layer, msg.position, msg.rotation);
+		SendRemoteInstanceToClients (msg.index, msg.tag, msg.layer, msg.position, msg.rotation);
+		NetworkServer.SpawnWithClientAuthority (inst.gameObject, conn);
     }
 
     IEnumerator TimedReturn (Transform instance, float time) {
