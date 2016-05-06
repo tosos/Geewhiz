@@ -102,7 +102,6 @@ public class Pooler : MonoBehaviour {
 			if (inst.GetComponent<NetworkIdentity>() == null) {
 				Debug.LogError ("pooler Trying to instantiate a prefab " + prefab.gameObject.name + " without id", prefab);
 			}
-			Debug.Log ("pooler Sending RPC " + PrefabIndex(prefab) + " at " + pos);
 			
 			SendRemoteInstanceToClients (PrefabIndex(prefab), prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
 			NetworkServer.Spawn(inst.gameObject);
@@ -143,9 +142,7 @@ public class Pooler : MonoBehaviour {
 			}
 		}
 
-		Debug.Log ("pooler Looking for " + assetIdToIndex[assetId] + " at " + position);
 		for (int i = 0; i < queuedInstances.Count; i ++) {
-			// Debug.Log ("queuedInfo " + assetIdToIndex[assetId] + " at " + queuedInfo[i].position);
 			if (queuedInstances[i].index == assetIdToIndex[assetId] && queuedInstances[i].position == position) {
 				Transform newInst = InstantiateInternal (assetIdToIndex[assetId], queuedInstances[i].tag, queuedInstances[i].layer, position, Quaternion.identity);
 				return newInst.gameObject;
@@ -158,7 +155,7 @@ public class Pooler : MonoBehaviour {
 
 	private void UnspawnPoolable (GameObject go) {
 		// Have we already retpooled this one?  If not then we need to 
-		if (go.activeSelf) {
+		if (go.activeSelf && go.transform.parent != transform) {
 			StartCoroutine (DelayedReturn (go.transform));
 		}
 	}
@@ -211,7 +208,6 @@ public class Pooler : MonoBehaviour {
     }
 
 	private void SendRemoteInstanceToServer (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
-		Debug.Log ("pooler Sending remote instance to the server");
 		RemoteInstanceMessage msg = new RemoteInstanceMessage ();
 		msg.index = index;
 		msg.tag = tag;
@@ -222,7 +218,6 @@ public class Pooler : MonoBehaviour {
 	}
 
 	private void ReceiveRemoteInstanceFromClient (NetworkMessage msg) {
-		Debug.Log ("Received a remote intance from the client");
 		RemoteInstanceMessage instMsg = msg.ReadMessage<RemoteInstanceMessage>();
 		RemoteInstance (msg.conn, instMsg);
 	}
