@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 public class Visuals : MonoBehaviour 
 {
+	public RuntimeAnimatorController controller;
+	public Avatar avatar;
 	public string[] visualAssets;
 	static private Dictionary<string, GameObject> resourceCache;
 
@@ -22,5 +24,12 @@ public class Visuals : MonoBehaviour
 			inst.transform.localPosition = prefab.transform.position;
 			inst.transform.localRotation = prefab.transform.rotation;
 		}
+
+		Animator animator = gameObject.GetComponent<Animator>();
+		if (animator == null) {
+			animator = gameObject.AddComponent<Animator>();
+		}
+		animator.avatar = avatar;
+		animator.runtimeAnimatorController = controller;
 	}
 }

@@ -105,7 +105,7 @@ public class Pooler : MonoBehaviour {
 			
 			SendRemoteInstanceToClients (PrefabIndex(prefab), prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
 			NetworkServer.Spawn(inst.gameObject);
-		} else if (NetworkClient.active != null) {
+		} else if (NetworkClient.active) {
 			localInstances.Add (inst);
 			callbacks.Add (func);
 			SendRemoteInstanceToServer (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
@@ -144,7 +144,7 @@ public class Pooler : MonoBehaviour {
 
 		for (int i = 0; i < queuedInstances.Count; i ++) {
 			if (queuedInstances[i].index == assetIdToIndex[assetId] && queuedInstances[i].position == position) {
-				Transform newInst = InstantiateInternal (assetIdToIndex[assetId], queuedInstances[i].tag, queuedInstances[i].layer, position, Quaternion.identity);
+				Transform newInst = InstantiateInternal (assetIdToIndex[assetId], queuedInstances[i].tag, queuedInstances[i].layer, position, queuedInstances[i].rotation);
 				return newInst.gameObject;
 			}
 		}
