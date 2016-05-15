@@ -55,9 +55,11 @@ public class Pooler : MonoBehaviour {
 
 		assetIdToIndex = new Dictionary<NetworkHash128, int> ();
 		for (int i = 0; i < poolablePrefabs.Length; i ++) {
-			NetworkHash128 assetId = poolablePrefabs[i].GetComponent<NetworkIdentity>().assetId;
-			ClientScene.RegisterSpawnHandler (assetId, SpawnPoolable, UnspawnPoolable);
-			assetIdToIndex[assetId] = i;
+			NetworkIdentity id = poolablePrefabs[i].GetComponent<NetworkIdentity>();
+			if (id != null) {
+				ClientScene.RegisterSpawnHandler (id.assetId, SpawnPoolable, UnspawnPoolable);
+				assetIdToIndex[id.assetId] = i;
+			}
 		}
 
 		// These are used to hold instances we create until we hear back from the server
@@ -77,8 +79,11 @@ public class Pooler : MonoBehaviour {
     void OnDestroy () {
         _instance = null;
 		for (int i = 0; i < poolablePrefabs.Length; i ++) {
-			NetworkHash128 assetId = poolablePrefabs[i].GetComponent<NetworkIdentity>().assetId;
-			ClientScene.UnregisterSpawnHandler (assetId);
+			NetworkIdentity id = poolablePrefabs[i].GetComponent<NetworkIdentity>();
+			if (id != null) {
+				NetworkHash128 assetId = id.assetId;
+				ClientScene.UnregisterSpawnHandler (id.assetId);
+			}
 		}
     }
 
