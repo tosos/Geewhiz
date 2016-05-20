@@ -27,7 +27,7 @@ public class Pooler : MonoBehaviour {
 	private List<RemoteInstanceMessage> queuedInstances;
 
 	private List<Transform> localInstances;
-	private List<NetworkInstantiateDelegate> callbacks;
+	// private List<NetworkInstantiateDelegate> callbacks;
 
     static private Pooler _instance = null;
     static public Pooler instance {
@@ -62,7 +62,7 @@ public class Pooler : MonoBehaviour {
 
 		// These are used to hold instances we create until we hear back from the server
 		localInstances = new List<Transform> ();
-		callbacks = new List<NetworkInstantiateDelegate> ();
+		// callbacks = new List<NetworkInstantiateDelegate> ();
 		queuedInstances = new List<RemoteInstanceMessage> ();
 
 		if (NetworkServer.active) {
@@ -91,7 +91,7 @@ public class Pooler : MonoBehaviour {
         return InstantiateInternal (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
     }
 
-    public Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, NetworkInstantiateDelegate func  = null) {
+    public Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, NetworkConnection authority = null) {
         int index = PrefabIndex (prefab);
         if (index < 0) {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
@@ -104,10 +104,16 @@ public class Pooler : MonoBehaviour {
 			}
 			
 			SendRemoteInstanceToClients (PrefabIndex(prefab), prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
-			NetworkServer.Spawn(inst.gameObject);
+			if (authority == null) {
+				Debug.Log ("Spawning " + prefab.gameObject.name + " without client authority " + authority);
+				NetworkServer.Spawn(inst.gameObject);
+			} else {
+				Debug.Log ("Spawning " + prefab.gameObject.name + " with client authority " + authority);
+				NetworkServer.SpawnWithClientAuthority (inst.gameObject, authority);
+			}
 		} else if (NetworkClient.active) {
 			localInstances.Add (inst);
-			callbacks.Add (func);
+			// callbacks.Add (func);
 			SendRemoteInstanceToServer (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
 		}
         return inst;
@@ -134,10 +140,12 @@ public class Pooler : MonoBehaviour {
 				}
 				Transform inst = localInstances[i];
 				localInstances.RemoveAt (i);
+/*
 				if (callbacks[i] != null) {
 					callbacks[i](inst);
 				}
 				callbacks.RemoveAt (i);
+*/
 				return inst.gameObject;
 			}
 		}
@@ -214,7 +222,7 @@ public class Pooler : MonoBehaviour {
 		msg.layer = layer;
 		msg.position = pos;
 		msg.rotation = rot;
-		NetworkManager.singleton.client.SendByChannel (RemoteInstanceMsg, msg, 0);
+		NetworkManager.singleton.client.Send (RemoteInstanceMsg, msg);
 	}
 
 	private void ReceiveRemoteInstanceFromClient (NetworkMessage msg) {
@@ -229,12 +237,12 @@ public class Pooler : MonoBehaviour {
 		msg.layer = layer;
 		msg.position = pos;
 		msg.rotation = rot;
-		NetworkServer.SendByChannelToAll (RemoteInstanceMsg, msg, 0);
+		NetworkServer.SendToAll (RemoteInstanceMsg, msg);
 	}
 
 	private void ReceiveRemoteInstanceFromServer (NetworkMessage msg) {
-		Debug.Log ("Received a remote intance from the client");
 		RemoteInstanceMessage queuedInst = msg.ReadMessage<RemoteInstanceMessage>();
+		Debug.Log ("Received a remote intance from the client");
 		queuedInstances.Add (queuedInst);
 	}
 
