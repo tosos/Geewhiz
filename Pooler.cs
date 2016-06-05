@@ -81,7 +81,6 @@ public class Pooler : MonoBehaviour {
 		for (int i = 0; i < poolablePrefabs.Length; i ++) {
 			NetworkIdentity id = poolablePrefabs[i].GetComponent<NetworkIdentity>();
 			if (id != null) {
-				NetworkHash128 assetId = id.assetId;
 				ClientScene.UnregisterSpawnHandler (id.assetId);
 			}
 		}
@@ -215,10 +214,20 @@ public class Pooler : MonoBehaviour {
         inst.rotation = rot;
         inst.gameObject.SetActive (true);
 
-		if (onPoolInstantiated != null)
-			onPoolInstantiated (inst);
+		StartCoroutine (SendPoolInstantiated (inst));
         return inst;
     }
+
+	private IEnumerator SendPoolInstantiated (Transform inst) {
+		Debug.Log ("Why does this only work if i include a debug message?");
+
+		// Allow the PoolStart to happen before this does
+		yield return null;
+
+		Debug.Log ("Sending pool instantiated");
+		if (onPoolInstantiated != null)
+			onPoolInstantiated (inst);
+	}
 
 	private void SendRemoteInstanceToServer (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
 		RemoteInstanceMessage msg = new RemoteInstanceMessage ();
