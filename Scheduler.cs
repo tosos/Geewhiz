@@ -59,35 +59,35 @@ public class Scheduler : MonoBehaviour {
         }
 	}
 
-    public void AddSchedule (float time, string message, bool repeat, GameObject obj = null) {
+    public static void AddSchedule (float time, string message, bool repeat, GameObject obj = null) {
         TimerMessage msg = new TimerMessage ();
         msg.message = message;
         msg.nextTime = Time.time + time;
         msg.secondsBetween = (repeat ? time : 0.0f);
         msg.gameObject = obj;
-        priorityQueue.Add (msg);
-        enabled = true;
+        instance.priorityQueue.Add (msg);
+        instance.enabled = true;
     }
 
-    public void UpdateSchedule (float time, string message, GameObject obj = null) {
+    public static void UpdateSchedule (float time, string message, GameObject obj = null) {
         TimerMessage msg = 
-            priorityQueue.Find ((a) => a.message == message && a.gameObject == obj);
+            instance.priorityQueue.Find ((a) => a.message == message && a.gameObject == obj);
         if (msg != null && msg.nextTime > 0) {
             msg.nextTime = Time.time + time;
-            priorityQueue.Update (msg);
+            instance.priorityQueue.Update (msg);
         } else {
             AddSchedule (time, message, false, obj);
         }
     }
 
-    public void CancelSchedule (string message, GameObject obj = null) {
+    public static void CancelSchedule (string message, GameObject obj = null) {
         bool continueLoop = true;
         while (continueLoop) {
             continueLoop = 
-                priorityQueue.Remove ((a) => a.message == message && (obj == null || a.gameObject == obj));
+                instance.priorityQueue.Remove ((a) => a.message == message && (obj == null || a.gameObject == obj));
         }
-        if (priorityQueue.Empty ()) {
-            enabled = false;
+        if (instance.priorityQueue.Empty ()) {
+            instance.enabled = false;
         }
     }
 

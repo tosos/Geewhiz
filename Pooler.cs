@@ -167,9 +167,11 @@ public class Pooler : MonoBehaviour {
 
 	private void UnspawnPoolable (GameObject go) {
 		// Have we already retpooled this one?  If not then we need to 
+		/* TODO need to work out the timing here if the local hasn't finished with it yet.
 		if (go.activeSelf && go.transform.parent != transform) {
-			StartCoroutine (DelayedReturn (go.transform));
+    		StartCoroutine (DelayedReturn (go.transform));
 		}
+		*/
 	}
 
     private int PrefabIndex (Transform prefab) {
@@ -199,10 +201,7 @@ public class Pooler : MonoBehaviour {
             pool.prefabIndex = index;
 			// Do this here so that it happens before the pool start
 			if (!NetworkServer.active) {
-				Visuals visuals = inst.GetComponent<Visuals>();
-				if (visuals != null) {
-					visuals.LoadVisuals ();
-				}
+				inst.BroadcastMessage ("LoadVisuals");
 			}
         } else {
             inst = pooledInstances[index].Dequeue ();
@@ -219,12 +218,9 @@ public class Pooler : MonoBehaviour {
     }
 
 	private IEnumerator SendPoolInstantiated (Transform inst) {
-		Debug.Log ("Why does this only work if i include a debug message?");
-
 		// Allow the PoolStart to happen before this does
 		yield return null;
 
-		Debug.Log ("Sending pool instantiated");
 		if (onPoolInstantiated != null)
 			onPoolInstantiated (inst);
 	}
@@ -256,7 +252,6 @@ public class Pooler : MonoBehaviour {
 
 	private void ReceiveRemoteInstanceFromServer (NetworkMessage msg) {
 		RemoteInstanceMessage queuedInst = msg.ReadMessage<RemoteInstanceMessage>();
-		Debug.Log ("Received a remote intance from the client");
 		queuedInstances.Add (queuedInst);
 	}
 
@@ -273,7 +268,7 @@ public class Pooler : MonoBehaviour {
     }
 
     IEnumerator DelayedReturn (Transform instance) {
-        yield return new WaitForEndOfFrame ();
+        yield return null;
         instance.parent = transform;
 
         Poolable pool = instance.GetComponent<Poolable>();

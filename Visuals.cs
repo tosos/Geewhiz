@@ -9,7 +9,13 @@ public class Visuals : MonoBehaviour
 	public string[] visualAssets;
 	static private Dictionary<string, GameObject> resourceCache;
 
+	private bool visualsLoaded = false;
+
 	public void LoadVisuals () {
+		if (visualsLoaded) {
+			return;
+		}
+
 		if (resourceCache == null) {
 			resourceCache = new Dictionary<string, GameObject> ();
 		}
@@ -31,5 +37,7 @@ public class Visuals : MonoBehaviour
 		}
 		animator.avatar = avatar;
 		animator.runtimeAnimatorController = controller;
+
+		visualsLoaded = true;
 	}
 }
