@@ -201,7 +201,7 @@ public class Pooler : MonoBehaviour {
             pool.prefabIndex = index;
 			// Do this here so that it happens before the pool start
 			if (!NetworkServer.active) {
-				inst.BroadcastMessage ("LoadVisuals");
+				inst.BroadcastMessage ("LoadVisuals", SendMessageOptions.DontRequireReceiver);
 			}
         } else {
             inst = pooledInstances[index].Dequeue ();
