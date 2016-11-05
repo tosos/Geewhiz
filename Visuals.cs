@@ -30,6 +30,7 @@ public class Visuals : MonoBehaviour
 			inst.transform.parent = transform;
 			inst.transform.localPosition = prefab.transform.position;
 			inst.transform.localRotation = prefab.transform.rotation;
+			inst.transform.localScale = prefab.transform.localScale;
 		}
 
 		Animator animator = gameObject.GetComponent<Animator>();
