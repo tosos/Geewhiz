@@ -33,12 +33,15 @@ public class Visuals : MonoBehaviour
 			inst.transform.localScale = prefab.transform.localScale;
 		}
 
-		Animator animator = gameObject.GetComponent<Animator>();
-		if (animator == null) {
-			animator = gameObject.AddComponent<Animator>();
+		if (controller != null)
+		{
+			Animator animator = gameObject.GetComponent<Animator>();
+			if (animator == null) {
+				animator = gameObject.AddComponent<Animator>();
+			}
+			animator.avatar = avatar;
+			animator.runtimeAnimatorController = controller;
 		}
-		animator.avatar = avatar;
-		animator.runtimeAnimatorController = controller;
 
 		visualsLoaded = true;
 	}
