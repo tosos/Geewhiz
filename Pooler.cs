@@ -259,6 +259,7 @@ public class Pooler : MonoBehaviour {
     private void RemoteInstance (NetworkConnection conn, RemoteInstanceMessage msg) {
         Transform inst = InstantiateInternal (msg.index, msg.tag, msg.layer, msg.position, msg.rotation);
 		SendRemoteInstanceToClients (msg.index, msg.tag, msg.layer, msg.position, msg.rotation);
+		Debug.Log ("RemoteInstance Spawning " + inst.gameObject.name + " with client authority " + conn);
 		NetworkServer.SpawnWithClientAuthority (inst.gameObject, conn);
     }
 
