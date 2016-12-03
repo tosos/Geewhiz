@@ -130,6 +130,10 @@ public class Pooler : MonoBehaviour {
        		StartCoroutine (DelayedReturn (instance));
 		}
 		if (NetworkServer.active) {
+			NetworkIdentity id = instance.GetComponent<NetworkIdentity> ();
+			if (id != null && id.clientAuthorityOwner != null) {
+				id.RemoveClientAuthority (id.clientAuthorityOwner);
+			}
 			NetworkServer.UnSpawn (instance.gameObject);
 		}
     }
