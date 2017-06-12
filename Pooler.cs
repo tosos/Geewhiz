@@ -86,13 +86,15 @@ public class Pooler : MonoBehaviour {
 		}
     }
 
-    public Transform InstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot) {
+    public Transform InstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, Transform parent = null) {
         int index = PrefabIndex (prefab);
         if (index < 0) {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
-        return InstantiateInternal (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
+        Transform inst = InstantiateInternal (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot, parent);
+		StartCoroutine (SendPoolInstantiated (inst));
+		return inst;
     }
 
     public Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, NetworkConnection authority = null) {
@@ -115,7 +117,9 @@ public class Pooler : MonoBehaviour {
 				Debug.Log ("Spawning " + prefab.gameObject.name + " with client authority " + authority);
 				NetworkServer.SpawnWithClientAuthority (inst.gameObject, authority);
 			}
+			StartCoroutine (SendPoolInstantiated (inst));
 		} else if (NetworkClient.active) {
+			// PoolInstantiated will be called once the spawn is received by the client.
 			localInstances.Add (inst);
 			// callbacks.Add (func);
 			SendRemoteInstanceToServer (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
@@ -134,7 +138,6 @@ public class Pooler : MonoBehaviour {
 			if (id != null && id.clientAuthorityOwner != null) {
 				id.RemoveClientAuthority (id.clientAuthorityOwner);
 			}
-			NetworkServer.UnSpawn (instance.gameObject);
 		}
     }
 
@@ -154,6 +157,7 @@ public class Pooler : MonoBehaviour {
 				}
 				callbacks.RemoveAt (i);
 */
+				StartCoroutine (SendPoolInstantiated (inst));
 				return inst.gameObject;
 			}
 		}
@@ -161,6 +165,7 @@ public class Pooler : MonoBehaviour {
 		for (int i = 0; i < queuedInstances.Count; i ++) {
 			if (queuedInstances[i].index == assetIdToIndex[assetId] && queuedInstances[i].position == position) {
 				Transform newInst = InstantiateInternal (assetIdToIndex[assetId], queuedInstances[i].tag, queuedInstances[i].layer, position, queuedInstances[i].rotation);
+				StartCoroutine (SendPoolInstantiated (newInst));
 				return newInst.gameObject;
 			}
 		}
@@ -191,7 +196,7 @@ public class Pooler : MonoBehaviour {
 		return -1;
     }
 
-    private Transform InstantiateInternal (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
+    private Transform InstantiateInternal (int index, string tag, int layer, Vector3 pos, Quaternion rot, Transform parent = null) {
         Transform inst;
         if (pooledInstances[index] == null) {
             pooledInstances[index] = new Queue<Transform>();
@@ -210,14 +215,13 @@ public class Pooler : MonoBehaviour {
         } else {
             inst = pooledInstances[index].Dequeue ();
         }
-        inst.parent = null;
+        inst.parent = parent;
 		inst.gameObject.tag = tag;
 		inst.gameObject.layer = layer;
         inst.position = pos;
         inst.rotation = rot;
         inst.gameObject.SetActive (true);
 
-		StartCoroutine (SendPoolInstantiated (inst));
         return inst;
     }
 
@@ -274,6 +278,14 @@ public class Pooler : MonoBehaviour {
 
     IEnumerator DelayedReturn (Transform instance) {
         yield return null;
+
+		if (NetworkServer.active) {
+			NetworkIdentity id = instance.GetComponent<NetworkIdentity> ();
+			if (id != null) {
+				NetworkServer.UnSpawn (instance.gameObject);
+			}
+		}
+
         instance.parent = transform;
 
         Poolable pool = instance.GetComponent<Poolable>();
