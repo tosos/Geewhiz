@@ -9,13 +9,13 @@ public class Pooler : MonoBehaviour {
 	public event OnPoolInstantiated onPoolInstantiated;
 
     public Transform[] poolablePrefabs;
-    private Queue<Transform>[] pooledInstances;
-	private Dictionary<NetworkHash128, int> assetIdToIndex;
+    protected Queue<Transform>[] pooledInstances;
+	protected Dictionary<NetworkHash128, int> assetIdToIndex;
     public int minPooledIds = 5;
 
 	public delegate void NetworkInstantiateDelegate (Transform inst);
 
-	private const short RemoteInstanceMsg = 1010;
+	protected const short RemoteInstanceMsg = 1010;
     public class RemoteInstanceMessage : MessageBase
     {
         public int index;
@@ -24,9 +24,9 @@ public class Pooler : MonoBehaviour {
         public Vector3 position;
         public Quaternion rotation;
     }
-	private List<RemoteInstanceMessage> queuedInstances;
+	protected List<RemoteInstanceMessage> queuedInstances;
 
-	private List<Transform> localInstances;
+	protected List<Transform> localInstances;
 	// private List<NetworkInstantiateDelegate> callbacks;
 
     static private Pooler _instance = null;
@@ -44,7 +44,7 @@ public class Pooler : MonoBehaviour {
 		return pool != null ? poolablePrefabs[pool.prefabIndex] : null;
 	}
 
-    void Awake () {
+    protected virtual void Awake () {
         if (_instance != null) {
             Debug.LogError ("Instance should be null");
         }
@@ -76,7 +76,7 @@ public class Pooler : MonoBehaviour {
 		}
     }
 
-    void OnDestroy () {
+    protected void OnDestroy () {
         _instance = null;
 		for (int i = 0; i < poolablePrefabs.Length; i ++) {
 			NetworkIdentity id = poolablePrefabs[i].GetComponent<NetworkIdentity>();
@@ -86,7 +86,7 @@ public class Pooler : MonoBehaviour {
 		}
     }
 
-    public Transform InstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, Transform parent = null) {
+    public virtual Transform InstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, Transform parent = null) {
         int index = PrefabIndex (prefab);
         if (index < 0) {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
@@ -97,7 +97,7 @@ public class Pooler : MonoBehaviour {
 		return inst;
     }
 
-    public Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, NetworkConnection authority = null) {
+    public virtual Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, NetworkConnection authority = null) {
         int index = PrefabIndex (prefab);
         if (index < 0) {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
@@ -141,7 +141,7 @@ public class Pooler : MonoBehaviour {
 		}
     }
 
-	private GameObject SpawnPoolable (Vector3 position, NetworkHash128 assetId) {
+	protected virtual GameObject SpawnPoolable (Vector3 position, NetworkHash128 assetId) {
 		for (int i = 0; i < localInstances.Count; i ++) {
 			if (localInstances[i].position == position && 
 				localInstances[i].GetComponent<NetworkIdentity>().assetId.ToString() == assetId.ToString()) 
@@ -174,7 +174,7 @@ public class Pooler : MonoBehaviour {
 		return null;
 	}
 
-	private void UnspawnPoolable (GameObject go) {
+	protected virtual void UnspawnPoolable (GameObject go) {
 		// Have we already retpooled this one?  If not then we need to 
 		/* TODO need to work out the timing here if the local hasn't finished with it yet.
 		if (go.activeSelf && go.transform.parent != transform) {
@@ -183,7 +183,7 @@ public class Pooler : MonoBehaviour {
 		*/
 	}
 
-    private int PrefabIndex (Transform prefab) {
+    protected int PrefabIndex (Transform prefab) {
 		NetworkIdentity id = prefab.GetComponent<NetworkIdentity>();
 		if (id != null) {
 			return assetIdToIndex[id.assetId];
@@ -196,7 +196,7 @@ public class Pooler : MonoBehaviour {
 		return -1;
     }
 
-    private Transform InstantiateInternal (int index, string tag, int layer, Vector3 pos, Quaternion rot, Transform parent = null) {
+    protected Transform InstantiateInternal (int index, string tag, int layer, Vector3 pos, Quaternion rot, Transform parent = null) {
         Transform inst;
         if (pooledInstances[index] == null) {
             pooledInstances[index] = new Queue<Transform>();
@@ -225,7 +225,7 @@ public class Pooler : MonoBehaviour {
         return inst;
     }
 
-	private IEnumerator SendPoolInstantiated (Transform inst) {
+	protected IEnumerator SendPoolInstantiated (Transform inst) {
 		// Allow the PoolStart to happen before this does
 		yield return null;
 
@@ -233,7 +233,7 @@ public class Pooler : MonoBehaviour {
 			onPoolInstantiated (inst);
 	}
 
-	private void SendRemoteInstanceToServer (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
+	protected void SendRemoteInstanceToServer (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
 		RemoteInstanceMessage msg = new RemoteInstanceMessage ();
 		msg.index = index;
 		msg.tag = tag;
@@ -243,12 +243,12 @@ public class Pooler : MonoBehaviour {
 		NetworkManager.singleton.client.Send (RemoteInstanceMsg, msg);
 	}
 
-	private void ReceiveRemoteInstanceFromClient (NetworkMessage msg) {
+	protected void ReceiveRemoteInstanceFromClient (NetworkMessage msg) {
 		RemoteInstanceMessage instMsg = msg.ReadMessage<RemoteInstanceMessage>();
 		RemoteInstance (msg.conn, instMsg);
 	}
 
-	private void SendRemoteInstanceToClients (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
+	protected void SendRemoteInstanceToClients (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
 		RemoteInstanceMessage msg = new RemoteInstanceMessage ();
 		msg.index = index;
 		msg.tag = tag;
@@ -258,13 +258,13 @@ public class Pooler : MonoBehaviour {
 		NetworkServer.SendToAll (RemoteInstanceMsg, msg);
 	}
 
-	private void ReceiveRemoteInstanceFromServer (NetworkMessage msg) {
+	protected void ReceiveRemoteInstanceFromServer (NetworkMessage msg) {
 		RemoteInstanceMessage queuedInst = msg.ReadMessage<RemoteInstanceMessage>();
 		queuedInstances.Add (queuedInst);
 	}
 
 
-    private void RemoteInstance (NetworkConnection conn, RemoteInstanceMessage msg) {
+    protected void RemoteInstance (NetworkConnection conn, RemoteInstanceMessage msg) {
         Transform inst = InstantiateInternal (msg.index, msg.tag, msg.layer, msg.position, msg.rotation);
 		SendRemoteInstanceToClients (msg.index, msg.tag, msg.layer, msg.position, msg.rotation);
 		Debug.Log ("RemoteInstance Spawning " + inst.gameObject.name + " with client authority " + conn);
@@ -276,7 +276,7 @@ public class Pooler : MonoBehaviour {
         StartCoroutine (DelayedReturn (instance));
     }
 
-    IEnumerator DelayedReturn (Transform instance) {
+    protected virtual IEnumerator DelayedReturn (Transform instance) {
         yield return null;
 
 		if (NetworkServer.active) {
