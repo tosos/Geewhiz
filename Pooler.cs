@@ -185,7 +185,7 @@ public class Pooler : MonoBehaviour {
 
     protected int PrefabIndex (Transform prefab) {
 		NetworkIdentity id = prefab.GetComponent<NetworkIdentity>();
-		if (id != null) {
+		if (id != null && assetIdToIndex.ContainsKey (id.assetId)) {
 			return assetIdToIndex[id.assetId];
 		}
 		for (int i = 0; i < poolablePrefabs.Length; i ++) {
