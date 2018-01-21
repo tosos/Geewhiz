@@ -14,6 +14,15 @@ public class Poolable : MonoBehaviour {
         }
     }
 
+    // Need to update in either fixed or update depending on which is going to run first (unknown apriori)
+    void FixedUpdate () {
+        if (needsStart) {
+            BroadcastMessage ("PoolStart", SendMessageOptions.DontRequireReceiver);
+            needsStart = false;
+            enabled = false;
+        }
+    }
+
     public void Return () {
         BroadcastMessage ("PoolReturn", SendMessageOptions.DontRequireReceiver);
         needsStart = true;
