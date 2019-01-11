@@ -4,8 +4,8 @@ using System.Collections.Generic;
 
 public class Visuals : MonoBehaviour 
 {
-	public RuntimeAnimatorController controller;
-	public Avatar avatar;
+	// public RuntimeAnimatorController controller;
+	// public Avatar avatar;
 	public string[] visualAssets;
 	static private Dictionary<string, GameObject> resourceCache;
 
@@ -33,6 +33,7 @@ public class Visuals : MonoBehaviour
 			inst.transform.localScale = prefab.transform.localScale;
 		}
 
+/*
 		if (controller != null)
 		{
 			Animator animator = gameObject.GetComponent<Animator>();
@@ -42,6 +43,7 @@ public class Visuals : MonoBehaviour
 			animator.avatar = avatar;
 			animator.runtimeAnimatorController = controller;
 		}
+*/
 
 		visualsLoaded = true;
 	}
