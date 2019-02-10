@@ -209,7 +209,7 @@ public class Pooler : MonoBehaviour {
             }
             pool.prefabIndex = index;
 			// Do this here so that it happens before the pool start
-			if (!NetworkServer.active) {
+			if (NetworkClient.active) {
 				inst.BroadcastMessage ("LoadVisuals", SendMessageOptions.DontRequireReceiver);
 			}
         } else {
