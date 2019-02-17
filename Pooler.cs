@@ -128,6 +128,7 @@ public class Pooler : MonoBehaviour {
     }
 
     public void ReturnToPool (Transform instance, float time = 0.0f) {
+		Debug.Log ("Receiving a ReturnToPool call for " + instance.gameObject.name, instance.gameObject);
 		if (time > 0) {
        		StartCoroutine (TimedReturn (instance, time));
 		} else {
@@ -209,7 +210,7 @@ public class Pooler : MonoBehaviour {
             }
             pool.prefabIndex = index;
 			// Do this here so that it happens before the pool start
-			if (NetworkClient.active) {
+			if (NetworkClient.active || !NetworkServer.active) {
 				inst.BroadcastMessage ("LoadVisuals", SendMessageOptions.DontRequireReceiver);
 			}
         } else {
