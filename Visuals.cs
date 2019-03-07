@@ -8,7 +8,7 @@ public class Visuals : MonoBehaviour
 	// public Avatar avatar;
 	public string[] visualAssets;
 	static private Dictionary<string, GameObject> resourceCache;
-
+	private List<GameObject> visualInsts;
 	private bool visualsLoaded = false;
 
 	public void LoadVisuals () {
@@ -19,6 +19,8 @@ public class Visuals : MonoBehaviour
 		if (resourceCache == null) {
 			resourceCache = new Dictionary<string, GameObject> ();
 		}
+
+		visualInsts = new List<GameObject> ();
 
 		for (int i = 0; i < visualAssets.Length; i ++) {
 			if (!resourceCache.ContainsKey (visualAssets[i])) {
@@ -31,20 +33,23 @@ public class Visuals : MonoBehaviour
 			inst.transform.localPosition = prefab.transform.position;
 			inst.transform.localRotation = prefab.transform.rotation;
 			inst.transform.localScale = prefab.transform.localScale;
+			visualInsts.Add (inst);
 		}
-
-/*
-		if (controller != null)
-		{
-			Animator animator = gameObject.GetComponent<Animator>();
-			if (animator == null) {
-				animator = gameObject.AddComponent<Animator>();
-			}
-			animator.avatar = avatar;
-			animator.runtimeAnimatorController = controller;
-		}
-*/
 
 		visualsLoaded = true;
 	}
+
+	public void EnableVisuals () {
+		Debug.Log ("Disabing construction visuals");
+		for (int i = 0; i < visualInsts.Count; i ++) {
+			visualInsts[i].SetActive (true);
+		}
+	}
+	public void DisableVisuals () {
+		Debug.Log ("Disabing construction visuals");
+		for (int i = 0; i < visualInsts.Count; i ++) {
+			visualInsts[i].SetActive (false);
+		}
+	}
+
 }

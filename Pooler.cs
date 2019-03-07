@@ -215,6 +215,9 @@ public class Pooler : MonoBehaviour {
 			}
         } else {
             inst = pooledInstances[index].Dequeue ();
+			if (NetworkClient.active || !NetworkServer.active) {
+				inst.BroadcastMessage ("EnableVisuals", SendMessageOptions.DontRequireReceiver);
+			}
         }
         inst.parent = parent;
 		inst.gameObject.tag = tag;
