@@ -40,7 +40,7 @@ public class Visuals : MonoBehaviour
 	}
 
 	public void EnableVisuals () {
-		Debug.Log ("Disabing construction visuals");
+		Debug.Log ("Enabling construction visuals");
 		for (int i = 0; i < visualInsts.Count; i ++) {
 			visualInsts[i].SetActive (true);
 		}
