@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Networking;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -13,6 +14,10 @@ public class Visuals : MonoBehaviour
 
 	public void LoadVisuals () {
 		if (visualsLoaded) {
+			return;
+		}
+
+		if (NetworkServer.active && !NetworkClient.active)  {
 			return;
 		}
 
@@ -40,6 +45,9 @@ public class Visuals : MonoBehaviour
 	}
 
 	public void EnableVisuals () {
+		if (NetworkServer.active && !NetworkClient.active)  {
+			return;
+		}
 		Debug.Log ("Enabling construction visuals");
 		for (int i = 0; i < visualInsts.Count; i ++) {
 			visualInsts[i].SetActive (true);
