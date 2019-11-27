@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.Networking;
+// using UnityEngine.Networking;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -22,6 +22,7 @@ public class Dispatcher : MonoBehaviour {
 	private const short DispatchVMessageId = 1004;
 	private const short DispatchQMessageId = 1005;
 
+/*
 	private class EMessage : MessageBase {
 		public string message;
 	}
@@ -50,6 +51,7 @@ public class Dispatcher : MonoBehaviour {
 		public string message;
 		public Quaternion parameter;
 	}
+*/
 
 
     void Awake () {
@@ -61,6 +63,7 @@ public class Dispatcher : MonoBehaviour {
         serialRecv = new Dictionary< string, List<GameObject> > ();
         parallelRecv = new Dictionary< string, List<GameObject> > ();
 
+/*
 		if (NetworkServer.active) {
 			NetworkServer.RegisterHandler (DispatchEMessageId, DispatchEMessage);
 			NetworkServer.RegisterHandler (DispatchIMessageId, DispatchIMessage);
@@ -77,10 +80,12 @@ public class Dispatcher : MonoBehaviour {
 			client.RegisterHandler (DispatchVMessageId, DispatchVMessage);
 			client.RegisterHandler (DispatchQMessageId, DispatchQMessage);
 		}
+*/
     }
 
     void OnDestroy () {
         _instance = null;
+/*
 		if (NetworkServer.active) {
 			NetworkServer.UnregisterHandler (DispatchEMessageId);
 			NetworkServer.UnregisterHandler (DispatchIMessageId);
@@ -97,6 +102,7 @@ public class Dispatcher : MonoBehaviour {
 			client.UnregisterHandler (DispatchVMessageId);
 			client.UnregisterHandler (DispatchQMessageId);
 		}
+*/
     }
 
     public void Register (string message, GameObject obj, bool isParallel = true) {
@@ -146,6 +152,7 @@ public class Dispatcher : MonoBehaviour {
         }
     }
 
+/*
     public void DispatchEMessage (NetworkMessage msg) {
 		EMessage emsg = msg.ReadMessage<EMessage> ();
        	Dispatch (emsg.message);
@@ -223,12 +230,13 @@ public class Dispatcher : MonoBehaviour {
 			}
 		}
     }
+*/
 
 	// TODO this can probably be improved...
     public void RemoteDispatch (string message, object parameter = null)
     {
         Dispatch (message, parameter);
-
+/*
 		short id;
 		MessageBase msg = ParseParameterToMessage (message, parameter, out id);
 		if (msg == null) return;
@@ -237,8 +245,10 @@ public class Dispatcher : MonoBehaviour {
 		} else if (NetworkClient.active) {
 			NetworkClient.allClients[0].SendByChannel (id, msg, 0);
 		}
+*/
     }
 
+/*
 	private MessageBase ParseParameterToMessage (string message, object parameter, out short id) {
 		MessageBase msgToSend = null;
         if (parameter == null) {
@@ -282,13 +292,16 @@ public class Dispatcher : MonoBehaviour {
         }
 		return msgToSend;
 	}
+*/
 
     void UpdateDebug () {
+/* TODO Update
         if (debugMessage != "" && GetComponent<GUIText>() != null) {
             GetComponent<GUIText>().text = "";
             foreach (GameObject go in serialRecv[debugMessage]) {
                 GetComponent<GUIText>().text += go.name + "\n";
             }
         }
+*/
     }
 }

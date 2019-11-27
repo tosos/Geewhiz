@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class PriorityQueue<T> where T : new() {
     private List<T> queueImpl;
@@ -47,6 +48,9 @@ public class PriorityQueue<T> where T : new() {
             queueImpl[ind] = queueImpl[last];
             queueImpl.RemoveAt (last);
             BubbleDown (ind);
+			if (queueImpl.Count == 0) {
+				Debug.LogError ("Woops, we're down to zero");
+			} 
             return true;
         } else {
             return false;
@@ -90,6 +94,10 @@ public class PriorityQueue<T> where T : new() {
     }
 
     private void BubbleDown (int ind) {
+		if (ind == 0) {
+			Debug.LogError ("Bubbling an invalid index");
+			return;
+		}
         while (ind < queueImpl.Count) {
             int left = ind * 2;
             int right = ind * 2 + 1;

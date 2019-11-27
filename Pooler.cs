@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.Networking;
+// using UnityEngine.Networking;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -10,13 +10,13 @@ public class Pooler : MonoBehaviour {
 
     public Transform[] poolablePrefabs;
     protected Queue<Transform>[] pooledInstances;
-	protected Dictionary<NetworkHash128, int> assetIdToIndex;
+	// protected Dictionary<NetworkHash128, int> assetIdToIndex;
     public int minPooledIds = 5;
 
 	public delegate void NetworkInstantiateDelegate (Transform inst);
 
 	protected const short RemoteInstanceMsg = 1010;
-    public class RemoteInstanceMessage : MessageBase
+    public class RemoteInstanceMessage /* : MessageBase */
     {
         public int index;
 		public string tag;
@@ -53,6 +53,7 @@ public class Pooler : MonoBehaviour {
         pooledInstances = new Queue<Transform>[poolablePrefabs.Length];
 		// TODO allow pre-warming the instances
 
+/*
 		assetIdToIndex = new Dictionary<NetworkHash128, int> ();
 		for (int i = 0; i < poolablePrefabs.Length; i ++) {
 			NetworkIdentity id = poolablePrefabs[i].GetComponent<NetworkIdentity>();
@@ -61,12 +62,14 @@ public class Pooler : MonoBehaviour {
 				assetIdToIndex[id.assetId] = i;
 			}
 		}
+*/
 
 		// These are used to hold instances we create until we hear back from the server
 		localInstances = new List<Transform> ();
 		// callbacks = new List<NetworkInstantiateDelegate> ();
 		queuedInstances = new List<RemoteInstanceMessage> ();
 
+/*
 		if (NetworkServer.active) {
 			NetworkServer.RegisterHandler (RemoteInstanceMsg, ReceiveRemoteInstanceFromClient);
 		}
@@ -74,16 +77,19 @@ public class Pooler : MonoBehaviour {
 		if (NetworkClient.active) {
 			NetworkManager.singleton.client.RegisterHandler (RemoteInstanceMsg, ReceiveRemoteInstanceFromServer);
 		}
+*/
     }
 
     protected void OnDestroy () {
         _instance = null;
+/*
 		for (int i = 0; i < poolablePrefabs.Length; i ++) {
 			NetworkIdentity id = poolablePrefabs[i].GetComponent<NetworkIdentity>();
 			if (id != null) {
 				ClientScene.UnregisterSpawnHandler (id.assetId);
 			}
 		}
+*/
     }
 
     public virtual Transform InstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, Transform parent = null) {
@@ -97,13 +103,14 @@ public class Pooler : MonoBehaviour {
 		return inst;
     }
 
-    public virtual Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot, NetworkConnection authority = null) {
+    public virtual Transform NetworkInstantiateFromPool (Transform prefab, Vector3 pos, Quaternion rot /* , NetworkConnection authority = null */) {
         int index = PrefabIndex (prefab);
         if (index < 0) {
             Debug.LogError ("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
         Transform inst = InstantiateInternal (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
+/*
 		if (NetworkServer.active) {
 			if (inst.GetComponent<NetworkIdentity>() == null) {
 				Debug.LogError ("pooler Trying to instantiate a prefab " + prefab.gameObject.name + " without id", prefab);
@@ -124,6 +131,7 @@ public class Pooler : MonoBehaviour {
 			// callbacks.Add (func);
 			SendRemoteInstanceToServer (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
 		}
+*/
         return inst;
     }
 
@@ -134,30 +142,31 @@ public class Pooler : MonoBehaviour {
 		} else {
        		StartCoroutine (DelayedReturn (instance));
 		}
+/*
 		if (NetworkServer.active) {
 			NetworkIdentity id = instance.GetComponent<NetworkIdentity> ();
 			if (id != null && id.clientAuthorityOwner != null) {
 				id.RemoveClientAuthority (id.clientAuthorityOwner);
 			}
 		}
+*/
     }
 
+/*
 	protected virtual GameObject SpawnPoolable (Vector3 position, NetworkHash128 assetId) {
 		for (int i = 0; i < localInstances.Count; i ++) {
-			if (localInstances[i].position == position && 
-				localInstances[i].GetComponent<NetworkIdentity>().assetId.ToString() == assetId.ToString()) 
+			if (localInstances[i].position == position 
+				&& localInstances[i].GetComponent<NetworkIdentity>().assetId.ToString() == assetId.ToString()) 
 			{
 				if (i > 0) {
 					Debug.LogWarning ("The local instance we found as not the first one.  That's odd.");
 				}
 				Transform inst = localInstances[i];
 				localInstances.RemoveAt (i);
-/*
 				if (callbacks[i] != null) {
 					callbacks[i](inst);
 				}
 				callbacks.RemoveAt (i);
-*/
 				StartCoroutine (SendPoolInstantiated (inst));
 				return inst.gameObject;
 			}
@@ -174,6 +183,7 @@ public class Pooler : MonoBehaviour {
 		Debug.LogWarning ("No queued info available for Spawned prefab");
 		return null;
 	}
+*/
 
 	protected virtual void UnspawnPoolable (GameObject go) {
 		// Have we already retpooled this one?  If not then we need to 
@@ -185,10 +195,12 @@ public class Pooler : MonoBehaviour {
 	}
 
     protected int PrefabIndex (Transform prefab) {
+/*
 		NetworkIdentity id = prefab.GetComponent<NetworkIdentity>();
 		if (id != null && assetIdToIndex.ContainsKey (id.assetId)) {
 			return assetIdToIndex[id.assetId];
 		}
+*/
 		for (int i = 0; i < poolablePrefabs.Length; i ++) {
 			if (prefab == poolablePrefabs[i]) {
 				return i;
@@ -233,6 +245,7 @@ public class Pooler : MonoBehaviour {
 			onPoolInstantiated (inst);
 	}
 
+/*
 	protected void SendRemoteInstanceToServer (int index, string tag, int layer, Vector3 pos, Quaternion rot) {
 		RemoteInstanceMessage msg = new RemoteInstanceMessage ();
 		msg.index = index;
@@ -270,6 +283,7 @@ public class Pooler : MonoBehaviour {
 		Debug.Log ("RemoteInstance Spawning " + inst.gameObject.name + " with client authority " + conn);
 		NetworkServer.SpawnWithClientAuthority (inst.gameObject, conn);
     }
+*/
 
     IEnumerator TimedReturn (Transform instance, float time) {
         yield return new WaitForSeconds (time);
@@ -279,12 +293,14 @@ public class Pooler : MonoBehaviour {
     protected virtual IEnumerator DelayedReturn (Transform instance) {
         yield return null;
 
+/*
 		if (NetworkServer.active) {
 			NetworkIdentity id = instance.GetComponent<NetworkIdentity> ();
 			if (id != null) {
 				NetworkServer.UnSpawn (instance.gameObject);
 			}
 		}
+*/
 
         instance.parent = transform;
 
