@@ -76,7 +76,7 @@ public class Pooler : MonoBehaviour {
             return null;
         }
         Transform inst = InstantiateInternal (index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot, parent);
-		StartCoroutine (SendPoolInstantiated (inst));
+		
 		return inst;
     }
 
@@ -167,7 +167,7 @@ public class Pooler : MonoBehaviour {
         inst.rotation = rot;
         inst.gameObject.SetActive (true);
 		inst.BroadcastMessage ("EnableVisuals", SendMessageOptions.DontRequireReceiver);
-
+        StartCoroutine(SendPoolInstantiated(inst));
         return inst;
     }
 
