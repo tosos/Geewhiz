@@ -32,7 +32,7 @@ public class PriorityQueue<T>where T : new()
         }
         else
         {
-            return null;
+            return default;
         }
     }
 
