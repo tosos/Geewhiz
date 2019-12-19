@@ -26,7 +26,7 @@ public class PriorityQueue<T>where T : new()
 
     public T at(int index)
     {
-        if (index > 0 && index < Count)
+        if (index >= 0 && index < Count)
         {
             return queueImpl[index + 1];
         }
