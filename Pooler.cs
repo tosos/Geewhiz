@@ -9,12 +9,12 @@ using Photon.Realtime;
 
 public class Pooler : MonoBehaviour
 {
-
     public delegate void OnPoolInstantiated(Transform instance);
     public event OnPoolInstantiated onPoolInstantiated;
 
     public Transform[] poolablePrefabs;
     protected Queue<Transform>[] pooledInstances;
+    protected List<Transform>[] activeInstances;
     // protected Dictionary<NetworkHash128, int> assetIdToIndex;
     public int minPooledIds = 5;
 
@@ -28,7 +28,7 @@ public class Pooler : MonoBehaviour
     {
         get
         {
-            if (_instance == null) { _instance = (Pooler) FindObjectOfType(typeof (Pooler)); }
+            if (_instance == null) { _instance = (Pooler) FindObjectOfType(typeof(Pooler)); }
             return _instance;
         }
     }
@@ -46,6 +46,7 @@ public class Pooler : MonoBehaviour
 
         pooledInstances = new Queue<Transform>[ poolablePrefabs.Length ];
         // TODO allow pre-warming the instances
+        activeInstances = new List<Transform>[ poolablePrefabs.Length ];
 
         // callbacks = new List<NetworkInstantiateDelegate> ();
     }
@@ -69,7 +70,17 @@ public class Pooler : MonoBehaviour
         _instance = null;
     }
 
-    public virtual Transform InstantiateFromPool(Transform prefab, Vector3 pos, Quaternion rot,
+    public virtual Transform InstantiateFromPool(Transform prefab, Vector3 pos = default(Vector3),
+                                                 Quaternion rot = default(Quaternion),
+                                                 Transform parent = null)
+    {
+        return InstantiateFromPool(prefab, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot,
+                                   parent);
+    }
+
+    public virtual Transform InstantiateFromPool(Transform prefab, string tag, int layer,
+                                                 Vector3 pos = default(Vector3),
+                                                 Quaternion rot = default(Quaternion),
                                                  Transform parent = null)
     {
         int index = PrefabIndex(prefab);
@@ -77,22 +88,28 @@ public class Pooler : MonoBehaviour
             Debug.LogError("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
-        Transform inst = InstantiateInternal(index, prefab.gameObject.tag, prefab.gameObject.layer,
-                                             pos, rot, parent);
-
+        Transform inst = InstantiateInternal(index, tag, layer, pos, rot, parent);
         return inst;
     }
 
-    public virtual Transform NetworkInstantiateFromPool(Transform prefab, Vector3 pos,
-                                                        Quaternion rot)
+    public virtual Transform NetworkInstantiateFromPool(Transform prefab,
+                                                        Vector3 pos = default(Vector3),
+                                                        Quaternion rot = default(Quaternion))
+    {
+        return NetworkInstantiateFromPool(prefab, prefab.gameObject.tag, prefab.gameObject.layer,
+                                          pos, rot);
+    }
+
+    public virtual Transform NetworkInstantiateFromPool(Transform prefab, string tag, int layer,
+                                                        Vector3 pos = default(Vector3),
+                                                        Quaternion rot = default(Quaternion))
     {
         int index = PrefabIndex(prefab);
         if (index < 0) {
             Debug.LogError("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
-        Transform inst =
-            InstantiateInternal(index, prefab.gameObject.tag, prefab.gameObject.layer, pos, rot);
+        Transform inst = InstantiateInternal(index, tag, layer, pos, rot);
 #if CLICKS_USES_PUN
         if (PhotonNetwork.IsConnected) {
             int viewID = -1;
@@ -160,8 +177,14 @@ public class Pooler : MonoBehaviour
             // Do this here so that it happens before the pool start
             inst.BroadcastMessage("LoadVisuals", SendMessageOptions.DontRequireReceiver);
         } else {
-            inst = pooledInstances[index].Dequeue();
+            inst = pooledInstances [index]
+                       .Dequeue();
         }
+
+        if (activeInstances[index] == null) { activeInstances[index] = new List<Transform>(); }
+        activeInstances [index]
+            .Add(inst);
+
         inst.parent = parent;
         inst.gameObject.tag = tag;
         inst.gameObject.layer = layer;
@@ -177,8 +200,7 @@ public class Pooler : MonoBehaviour
     {
         // Allow the PoolStart to happen before this does
         yield return null;
-
-        if (onPoolInstantiated != null) onPoolInstantiated(inst);
+        onPoolInstantiated?.Invoke(inst);
     }
 
     IEnumerator TimedReturn(Transform instance, float time)
@@ -207,18 +229,65 @@ public class Pooler : MonoBehaviour
             PhotonNetwork.LocalCleanPhotonView(view);
         }
 #endif
-
         instance.parent = transform;
+        instance.gameObject.SetActive(false);
 
         Poolable pool = instance.GetComponent<Poolable>();
         if (!pool) { Debug.LogError("Poolable hasn't been added to " + instance.name); }
         pool.Return();
-        instance.gameObject.SetActive(false);
+
+        if (activeInstances[pool.prefabIndex] == null) {
+            Debug.LogWarning("We're pool returning an object that was never instantiated");
+            activeInstances[pool.prefabIndex] = new List<Transform>();
+        }
+        activeInstances [pool.prefabIndex]
+            .Remove(instance);
+
         if (pooledInstances[pool.prefabIndex] == null) {
             // This case covers instances that exist in the scene
             // but are returned before an InstantiateFromPool
             pooledInstances[pool.prefabIndex] = new Queue<Transform>();
         }
-        pooledInstances[pool.prefabIndex].Enqueue(instance);
+        pooledInstances [pool.prefabIndex]
+            .Enqueue(instance);
+    }
+
+    private struct InstanceData {
+        public int prefabIndex;
+        public string tag;
+        public int layer;
+        public Vector3 position;
+        public Quaternion rotation;
+        public string poolState;
+    };
+
+    public virtual string SaveState()
+    {
+        List<InstanceData> storeInstances = new List<InstanceData>();
+        for (int index = 0; index < activeInstances.Length; index++) {
+            for (int i = 0; i < activeInstances[index].Count; i++) {
+                Transform inst = activeInstances [index]
+                [i];
+                InstanceData data = new InstanceData();
+                data.prefabIndex = index;
+                data.tag = inst.gameObject.tag;
+                data.layer = inst.gameObject.layer;
+                data.position = inst.position;
+                data.rotation = inst.rotation;
+                data.poolState = inst.gameObject.GetComponent<Poolable>().SaveState();
+            }
+        }
+        return JsonUtility.ToJson(storeInstances);
+    }
+
+    public virtual void LoadState(string state)
+    {
+        List<InstanceData> storeInstances = JsonUtility.FromJson<List<InstanceData>>(state);
+        for (int i = 0; i < storeInstances.Count; i++) {
+            InstanceData data = storeInstances[i];
+            Transform inst = InstantiateInternal(data.prefabIndex, data.tag, data.layer,
+                                                 data.position, data.rotation);
+            inst.gameObject.GetComponent<Poolable>().LoadState(data.poolState);
+        }
     }
 }

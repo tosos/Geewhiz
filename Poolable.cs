@@ -1,5 +1,5 @@
 using UnityEngine;
-using System.Collections;
+using System.Collections.Generic;
 
 public class Poolable : MonoBehaviour
 {
@@ -33,12 +33,46 @@ public class Poolable : MonoBehaviour
         enabled = true;
 
         // Reset components to their default values when going back to the pool
-        foreach(Rigidbody rb in GetComponentsInChildren<Rigidbody>())
+        foreach (Rigidbody rb in GetComponentsInChildren<Rigidbody>())
         {
             if (!rb.isKinematic) {
                 rb.velocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
         }
+    }
+
+    private struct StatePair
+    {
+        public string id;
+        public string state;
+    };
+    private List<StatePair> states;
+
+    public void AddStatePair(string id, string state)
+    {
+        StatePair sp = new StatePair();
+        sp.id = id;
+        sp.state = state;
+        states.Add(sp);
+    }
+
+    public string SaveState()
+    {
+        states = new List<StatePair>();
+        BroadcastMessage("SaveStateToPool", this, SendMessageOptions.DontRequireReceiver);
+        return JsonUtility.ToJson(states);
+    }
+
+    public void LoadState(string state)
+    {
+        states = JsonUtility.FromJson<List<StatePair>>(state);
+        for (int i = 0; i < states.Count; i ++)
+        {
+            BroadcastMessage("LoadStateFromPool", states[i], SendMessageOptions.DontRequireReceiver);
+        }
+        // If we're restoring state, we've already started in the stored state
+        needsStart = false;
+        enabled = false;
     }
 }
