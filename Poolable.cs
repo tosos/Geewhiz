@@ -5,6 +5,7 @@ public class Poolable : MonoBehaviour
 {
     public int prefabIndex;
     private bool needsStart = true;
+    private bool needsRestore = false;
 
     // This script should be configured to run before all others.
     void Update()
@@ -24,6 +25,14 @@ public class Poolable : MonoBehaviour
             needsStart = false;
             enabled = false;
         }
+
+        if (needsRestore) {
+            for (int i = 0; i < states.Count; i++) {
+                BroadcastMessage("LoadStateFromPool", states[i],
+                                 SendMessageOptions.DontRequireReceiver);
+            }
+            needsRestore = false;
+        }
     }
 
     public void Return()
@@ -33,7 +42,7 @@ public class Poolable : MonoBehaviour
         enabled = true;
 
         // Reset components to their default values when going back to the pool
-        foreach (Rigidbody rb in GetComponentsInChildren<Rigidbody>())
+        foreach(Rigidbody rb in GetComponentsInChildren<Rigidbody>())
         {
             if (!rb.isKinematic) {
                 rb.velocity = Vector3.zero;
@@ -42,12 +51,11 @@ public class Poolable : MonoBehaviour
         }
     }
 
-    private struct StatePair
-    {
+    public struct StatePair {
         public string id;
         public string state;
     };
-    private List<StatePair> states;
+    private List<StatePair>states;
 
     public void AddStatePair(string id, string state)
     {
@@ -67,12 +75,6 @@ public class Poolable : MonoBehaviour
     public void LoadState(string state)
     {
         states = JsonUtility.FromJson<List<StatePair>>(state);
-        for (int i = 0; i < states.Count; i ++)
-        {
-            BroadcastMessage("LoadStateFromPool", states[i], SendMessageOptions.DontRequireReceiver);
-        }
-        // If we're restoring state, we've already started in the stored state
-        needsStart = false;
-        enabled = false;
+        needsRestore = true;
     }
 }

@@ -23,6 +23,11 @@ public class Pooler : MonoBehaviour
 
     protected const byte RemoteInstanceMsg = 10;
 
+    protected bool isRestoringState = false;
+    public bool IsRestoringState {
+        get { return isRestoringState; }
+    }
+
     static private Pooler _instance = null;
     static public Pooler instance
     {
@@ -283,11 +288,13 @@ public class Pooler : MonoBehaviour
     public virtual void LoadState(string state)
     {
         List<InstanceData> storeInstances = JsonUtility.FromJson<List<InstanceData>>(state);
+        isRestoringState = true;
         for (int i = 0; i < storeInstances.Count; i++) {
             InstanceData data = storeInstances[i];
             Transform inst = InstantiateInternal(data.prefabIndex, data.tag, data.layer,
                                                  data.position, data.rotation);
             inst.gameObject.GetComponent<Poolable>().LoadState(data.poolState);
         }
+        isRestoringState = false;
     }
 }
