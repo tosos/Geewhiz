@@ -4,6 +4,7 @@ using System.Collections.Generic;
 public class Poolable : MonoBehaviour
 {
     public int prefabIndex;
+    public int poolId = -1;
     private bool needsStart = true;
     private bool needsRestore = false;
 

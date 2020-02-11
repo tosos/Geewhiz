@@ -15,8 +15,10 @@ public class Pooler : MonoBehaviour
     public Transform[] poolablePrefabs;
     protected Queue<Transform>[] pooledInstances;
     protected List<Transform>[] activeInstances;
-    // protected Dictionary<NetworkHash128, int> assetIdToIndex;
+    protected Dictionary<int, Transform>poolIdToInstance;
     public int minPooledIds = 5;
+
+    protected int nextPoolId = 1;
 
     public delegate void NetworkInstantiateDelegate(Transform inst);
     // private List<NetworkInstantiateDelegate> callbacks;
@@ -24,8 +26,12 @@ public class Pooler : MonoBehaviour
     protected const byte RemoteInstanceMsg = 10;
 
     protected bool isRestoringState = false;
-    public bool IsRestoringState {
-        get { return isRestoringState; }
+    public bool IsRestoringState
+    {
+        get
+        {
+            return isRestoringState;
+        }
     }
 
     static private Pooler _instance = null;
@@ -33,7 +39,7 @@ public class Pooler : MonoBehaviour
     {
         get
         {
-            if (_instance == null) { _instance = (Pooler) FindObjectOfType(typeof(Pooler)); }
+            if (_instance == null) { _instance = (Pooler) FindObjectOfType(typeof (Pooler)); }
             return _instance;
         }
     }
@@ -44,6 +50,15 @@ public class Pooler : MonoBehaviour
         return pool != null ? poolablePrefabs[pool.prefabIndex] : null;
     }
 
+    public Transform FindInstance(int poolId)
+    {
+        if (poolIdToInstance.ContainsKey(poolId)) {
+            return poolIdToInstance[poolId];
+        } else {
+            return null;
+        }
+    }
+
     protected virtual void Awake()
     {
         if (_instance != null) { Debug.LogError("Instance should be null"); }
@@ -52,6 +67,7 @@ public class Pooler : MonoBehaviour
         pooledInstances = new Queue<Transform>[ poolablePrefabs.Length ];
         // TODO allow pre-warming the instances
         activeInstances = new List<Transform>[ poolablePrefabs.Length ];
+        poolIdToInstance = new Dictionary<int, Transform>();
 
         // callbacks = new List<NetworkInstantiateDelegate> ();
     }
@@ -93,7 +109,8 @@ public class Pooler : MonoBehaviour
             Debug.LogError("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
-        Transform inst = InstantiateInternal(index, tag, layer, pos, rot, parent);
+        Transform inst = InstantiateInternal(index, nextPoolId, tag, layer, pos, rot, parent);
+        nextPoolId++;
         return inst;
     }
 
@@ -109,22 +126,23 @@ public class Pooler : MonoBehaviour
                                                         Vector3 pos = default(Vector3),
                                                         Quaternion rot = default(Quaternion))
     {
-        int index = PrefabIndex(prefab);
-        if (index < 0) {
+        int prefabIndex = PrefabIndex(prefab);
+        if (prefabIndex < 0) {
             Debug.LogError("Prefab " + prefab.name + " is not in poolable set");
             return null;
         }
-        Transform inst = InstantiateInternal(index, tag, layer, pos, rot);
+        int viewId = -1;
+#if CLICKS_USES_PUN
+        if (PhotonNetwork.IsConnected) { viewId = PhotonNetwork.AllocateViewID(false); }
+#endif
+        Transform inst = InstantiateInternal(prefabIndex, viewId, tag, layer, pos, rot);
 #if CLICKS_USES_PUN
         if (PhotonNetwork.IsConnected) {
-            int viewID = -1;
             PhotonView view = inst.GetComponent<PhotonView>();
-            if (view != null) {
-                view.ViewID = PhotonNetwork.AllocateViewID(false);
-                viewID = view.ViewID;
-            }
-            object[] content = {viewID, index, prefab.gameObject.tag, prefab.gameObject.layer,
-                                pos,    rot};
+            if (view != null) { view.ViewID = viewId; }
+            // override the auto-allocated poolID with the one from the network
+            object[] content = {prefabIndex, viewId, prefab.gameObject.tag, prefab.gameObject.layer,
+                                pos,         rot};
             RaiseEventOptions raiseEventOptions =
                 new RaiseEventOptions{Receivers = ReceiverGroup.Others};
             var sendOptions = new ExitGames.Client.Photon.SendOptions{Reliability = true};
@@ -152,10 +170,12 @@ public class Pooler : MonoBehaviour
     {
         if (photonEvent.Code == RemoteInstanceMsg) {
             object[] data = (object[]) photonEvent.CustomData;
-            Transform inst = InstantiateInternal((int) data[1], (string) data[2], (int) data[3],
-                                                 (Vector3) data[4], (Quaternion) data[5]);
+            // TODO can we transfer the poolId somehow safely vs -1 here?
+            Transform inst =
+                InstantiateInternal((int) data[0], (int) data[1], (string) data[2], (int) data[3],
+                                    (Vector3) data[4], (Quaternion) data[5]);
             PhotonView view = inst.GetComponent<PhotonView>();
-            if (view != null) { view.ViewID = (int) data[0]; }
+            if (view != null) { view.ViewID = (int) data[1]; }
         }
     }
 #endif
@@ -168,27 +188,30 @@ public class Pooler : MonoBehaviour
         return -1;
     }
 
-    protected Transform InstantiateInternal(int index, string tag, int layer, Vector3 pos,
+    protected Transform InstantiateInternal(int index, int id, string tag, int layer, Vector3 pos,
                                             Quaternion rot, Transform parent = null)
     {
         Transform inst;
         if (pooledInstances[index] == null) { pooledInstances[index] = new Queue<Transform>(); }
+        Poolable poolable = null;
         if (pooledInstances[index].Count == 0) {
             inst =
                 (Transform) Instantiate(poolablePrefabs[index], Vector3.zero, Quaternion.identity);
-            Poolable pool = inst.GetComponent<Poolable>();
-            if (pool == null) { pool = inst.gameObject.AddComponent<Poolable>(); }
-            pool.prefabIndex = index;
+            poolable = inst.GetComponent<Poolable>();
+            if (poolable == null) { poolable = inst.gameObject.AddComponent<Poolable>(); }
+            poolable.prefabIndex = index;
             // Do this here so that it happens before the pool start
             inst.BroadcastMessage("LoadVisuals", SendMessageOptions.DontRequireReceiver);
         } else {
-            inst = pooledInstances [index]
-                       .Dequeue();
+            inst = pooledInstances[index].Dequeue();
+            poolable = inst.GetComponent<Poolable>();
         }
 
+        poolable.poolId = id;
+        poolIdToInstance[id] = inst;
+
         if (activeInstances[index] == null) { activeInstances[index] = new List<Transform>(); }
-        activeInstances [index]
-            .Add(inst);
+        activeInstances[index].Add(inst);
 
         inst.parent = parent;
         inst.gameObject.tag = tag;
@@ -245,20 +268,21 @@ public class Pooler : MonoBehaviour
             Debug.LogWarning("We're pool returning an object that was never instantiated");
             activeInstances[pool.prefabIndex] = new List<Transform>();
         }
-        activeInstances [pool.prefabIndex]
-            .Remove(instance);
+        activeInstances[pool.prefabIndex].Remove(instance);
+
+        poolIdToInstance.Remove(pool.poolId);
 
         if (pooledInstances[pool.prefabIndex] == null) {
             // This case covers instances that exist in the scene
             // but are returned before an InstantiateFromPool
             pooledInstances[pool.prefabIndex] = new Queue<Transform>();
         }
-        pooledInstances [pool.prefabIndex]
-            .Enqueue(instance);
+        pooledInstances[pool.prefabIndex].Enqueue(instance);
     }
 
     private struct InstanceData {
         public int prefabIndex;
+        public int poolId;
         public string tag;
         public int layer;
         public Vector3 position;
@@ -268,18 +292,20 @@ public class Pooler : MonoBehaviour
 
     public virtual string SaveState()
     {
-        List<InstanceData> storeInstances = new List<InstanceData>();
+        List<InstanceData>storeInstances = new List<InstanceData>();
         for (int index = 0; index < activeInstances.Length; index++) {
             for (int i = 0; i < activeInstances[index].Count; i++) {
                 Transform inst = activeInstances [index]
                 [i];
                 InstanceData data = new InstanceData();
-                data.prefabIndex = index;
+                Poolable poolable = inst.gameObject.GetComponent<Poolable>();
+                data.prefabIndex = poolable.prefabIndex;
+                data.poolId = poolable.poolId;
+                data.poolState = poolable.SaveState();
                 data.tag = inst.gameObject.tag;
                 data.layer = inst.gameObject.layer;
                 data.position = inst.position;
                 data.rotation = inst.rotation;
-                data.poolState = inst.gameObject.GetComponent<Poolable>().SaveState();
             }
         }
         return JsonUtility.ToJson(storeInstances);
@@ -287,12 +313,12 @@ public class Pooler : MonoBehaviour
 
     public virtual void LoadState(string state)
     {
-        List<InstanceData> storeInstances = JsonUtility.FromJson<List<InstanceData>>(state);
+        List<InstanceData>storeInstances = JsonUtility.FromJson<List<InstanceData>>(state);
         isRestoringState = true;
         for (int i = 0; i < storeInstances.Count; i++) {
             InstanceData data = storeInstances[i];
-            Transform inst = InstantiateInternal(data.prefabIndex, data.tag, data.layer,
-                                                 data.position, data.rotation);
+            Transform inst = InstantiateInternal(data.prefabIndex, data.poolId, data.tag,
+                                                 data.layer, data.position, data.rotation);
             inst.gameObject.GetComponent<Poolable>().LoadState(data.poolState);
         }
         isRestoringState = false;
