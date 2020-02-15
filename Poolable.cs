@@ -8,6 +8,17 @@ public class Poolable : MonoBehaviour
     private bool needsStart = true;
     private bool needsRestore = false;
 
+    [System.Serializable]
+    public class StatePair {
+        public string id;
+        public string state;
+    };
+    [System.Serializable]
+    private class StateContainer {
+        public List<StatePair>states = new List<StatePair> ();
+    }
+    private StateContainer container;
+
     // This script should be configured to run before all others.
     void Update()
     {
@@ -28,8 +39,8 @@ public class Poolable : MonoBehaviour
         }
 
         if (needsRestore) {
-            for (int i = 0; i < states.Count; i++) {
-                BroadcastMessage("LoadStateFromPool", states[i],
+            for (int i = 0; i < container.states.Count; i++) {
+                BroadcastMessage("LoadStateFromPool", container.states[i],
                                  SendMessageOptions.DontRequireReceiver);
             }
             needsRestore = false;
@@ -52,30 +63,24 @@ public class Poolable : MonoBehaviour
         }
     }
 
-    public struct StatePair {
-        public string id;
-        public string state;
-    };
-    private List<StatePair>states;
-
     public void AddStatePair(string id, string state)
     {
         StatePair sp = new StatePair();
         sp.id = id;
         sp.state = state;
-        states.Add(sp);
+        container.states.Add(sp);
     }
 
     public string SaveState()
     {
-        states = new List<StatePair>();
+        container = new StateContainer ();
         BroadcastMessage("SaveStateToPool", this, SendMessageOptions.DontRequireReceiver);
-        return JsonUtility.ToJson(states);
+        return JsonUtility.ToJson(container);
     }
 
     public void LoadState(string state)
     {
-        states = JsonUtility.FromJson<List<StatePair>>(state);
+        container = JsonUtility.FromJson<StateContainer>(state);
         needsRestore = true;
     }
 }

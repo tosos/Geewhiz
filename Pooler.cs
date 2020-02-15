@@ -133,8 +133,13 @@ public class Pooler : MonoBehaviour
         }
         int viewId = -1;
 #if CLICKS_USES_PUN
-        if (PhotonNetwork.IsConnected) { viewId = PhotonNetwork.AllocateViewID(false); }
+        if (PhotonNetwork.IsConnected) {
+            viewId = PhotonNetwork.AllocateViewID(false);
+        } else
 #endif
+        {
+            viewId = nextPoolId ++;
+        }
         Transform inst = InstantiateInternal(prefabIndex, viewId, tag, layer, pos, rot);
 #if CLICKS_USES_PUN
         if (PhotonNetwork.IsConnected) {
@@ -257,9 +262,6 @@ public class Pooler : MonoBehaviour
             PhotonNetwork.LocalCleanPhotonView(view);
         }
 #endif
-        instance.parent = transform;
-        instance.gameObject.SetActive(false);
-
         Poolable pool = instance.GetComponent<Poolable>();
         if (!pool) { Debug.LogError("Poolable hasn't been added to " + instance.name); }
         pool.Return();
@@ -278,6 +280,9 @@ public class Pooler : MonoBehaviour
             pooledInstances[pool.prefabIndex] = new Queue<Transform>();
         }
         pooledInstances[pool.prefabIndex].Enqueue(instance);
+
+        instance.parent = transform;
+        instance.gameObject.SetActive(false);
     }
 
     private struct InstanceData {
@@ -306,6 +311,7 @@ public class Pooler : MonoBehaviour
                 data.layer = inst.gameObject.layer;
                 data.position = inst.position;
                 data.rotation = inst.rotation;
+                storeInstances.Add(data);
             }
         }
         return JsonUtility.ToJson(storeInstances);
