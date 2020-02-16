@@ -20,17 +20,18 @@ public class Poolable : MonoBehaviour
     private StateContainer container;
 
     // This script should be configured to run before all others.
-    void Update()
+    private void Update()
     {
-        if (needsStart) {
-            BroadcastMessage("PoolStart", SendMessageOptions.DontRequireReceiver);
-            needsStart = false;
-            enabled = false;
-        }
+        ProcessStartupIfNeeded();
     }
 
     // Need to update in either fixed or update depending on which is going to run first (unknown apriori)
-    void FixedUpdate()
+    private void FixedUpdate()
+    {
+        ProcessStartupIfNeeded();
+    }
+
+    private void ProcessStartupIfNeeded()
     {
         if (needsStart) {
             BroadcastMessage("PoolStart", SendMessageOptions.DontRequireReceiver);
@@ -44,6 +45,7 @@ public class Poolable : MonoBehaviour
                                  SendMessageOptions.DontRequireReceiver);
             }
             needsRestore = false;
+            enabled = false;
         }
     }
 
@@ -82,5 +84,6 @@ public class Poolable : MonoBehaviour
     {
         container = JsonUtility.FromJson<StateContainer>(state);
         needsRestore = true;
+        enabled = true;
     }
 }
