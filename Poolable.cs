@@ -34,14 +34,14 @@ public class Poolable : MonoBehaviour
     private void ProcessStartupIfNeeded()
     {
         if (needsStart) {
-            BroadcastMessage("PoolStart", SendMessageOptions.DontRequireReceiver);
+            SendMessage("PoolStart", SendMessageOptions.DontRequireReceiver);
             needsStart = false;
             enabled = false;
         }
 
         if (needsRestore) {
             for (int i = 0; i < container.states.Count; i++) {
-                BroadcastMessage("LoadStateFromPool", container.states[i],
+                SendMessage("LoadStateFromPool", container.states[i],
                                  SendMessageOptions.DontRequireReceiver);
             }
             needsRestore = false;
@@ -51,7 +51,7 @@ public class Poolable : MonoBehaviour
 
     public void Return()
     {
-        BroadcastMessage("PoolReturn", SendMessageOptions.DontRequireReceiver);
+        SendMessage("PoolReturn", SendMessageOptions.DontRequireReceiver);
         needsStart = true;
         enabled = true;
 
@@ -76,7 +76,7 @@ public class Poolable : MonoBehaviour
     public string SaveState()
     {
         container = new StateContainer ();
-        BroadcastMessage("SaveStateToPool", this, SendMessageOptions.DontRequireReceiver);
+        SendMessage("SaveStateToPool", this, SendMessageOptions.DontRequireReceiver);
         return JsonUtility.ToJson(container);
     }
 
