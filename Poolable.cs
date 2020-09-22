@@ -25,6 +25,11 @@ public class Poolable : MonoBehaviour
         ProcessStartupIfNeeded();
     }
 
+	protected void OnDestroy()
+	{
+		Debug.LogWarning("Destroy shouldn't be called on Poolable in most cases");
+	}
+
     // Need to update in either fixed or update depending on which is going to run first (unknown apriori)
     private void FixedUpdate()
     {
