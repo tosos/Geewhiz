@@ -212,6 +212,14 @@ public class Pooler : MonoBehaviour
             poolable = inst.GetComponent<Poolable>();
         }
 
+        if (poolIdToInstance.ContainsKey(id)) {
+            Debug.LogError ("Catastrophic id error, repeated poolid " + id + ". Attempting to correct, good luck");
+            while (poolIdToInstance.ContainsKey(id)) {
+                id ++;
+            }
+            nextPoolId = id + 1;
+        }
+
         poolable.poolId = id;
         poolIdToInstance[id] = inst;
 
@@ -300,8 +308,7 @@ public class Pooler : MonoBehaviour
         List<InstanceData>storeInstances = new List<InstanceData>();
         for (int index = 0; index < activeInstances.Length; index++) {
             for (int i = 0; i < activeInstances[index].Count; i++) {
-                Transform inst = activeInstances [index]
-                [i];
+                Transform inst = activeInstances[index][i];
                 InstanceData data = new InstanceData();
                 Poolable poolable = inst.gameObject.GetComponent<Poolable>();
                 data.prefabIndex = poolable.prefabIndex;
@@ -319,6 +326,9 @@ public class Pooler : MonoBehaviour
 
     public virtual void LoadState(string state)
     {
+        if (nextPoolId > 1) {
+            Debug.LogError ("Constructed some assets before loading, that's a problem");
+        }
         List<InstanceData>storeInstances = JsonUtility.FromJson<List<InstanceData>>(state);
         isRestoringState = true;
         for (int i = 0; i < storeInstances.Count; i++) {
@@ -326,6 +336,9 @@ public class Pooler : MonoBehaviour
             Transform inst = InstantiateInternal(data.prefabIndex, data.poolId, data.tag,
                                                  data.layer, data.position, data.rotation);
             inst.gameObject.GetComponent<Poolable>().LoadState(data.poolState);
+            if (nextPoolId < data.poolId) {
+                nextPoolId = data.poolId + 1;
+            }
         }
         isRestoringState = false;
     }
