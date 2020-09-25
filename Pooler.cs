@@ -17,6 +17,8 @@ public class Pooler : MonoBehaviour
     protected List<Transform>[] activeInstances;
     protected Dictionary<int, Transform>poolIdToInstance;
     public int minPooledIds = 5;
+    public Transform[] dontSaveSet;
+    protected HashSet<int> dontSaveIds;
 
     protected int nextPoolId = 1;
 
@@ -70,6 +72,12 @@ public class Pooler : MonoBehaviour
         poolIdToInstance = new Dictionary<int, Transform>();
 
         // callbacks = new List<NetworkInstantiateDelegate> ();
+        dontSaveIds = new HashSet<int>();
+        foreach (Transform prefab in dontSaveSet) {
+            int prefabIndex = PrefabIndex(prefab);
+            Debug.Log ("Adding " + prefabIndex + " to the dontsave set");
+            dontSaveIds.Add(prefabIndex);
+        }
     }
 
     protected virtual void OnEnable()
@@ -309,8 +317,13 @@ public class Pooler : MonoBehaviour
         for (int index = 0; index < activeInstances.Length; index++) {
             for (int i = 0; i < activeInstances[index].Count; i++) {
                 Transform inst = activeInstances[index][i];
-                InstanceData data = new InstanceData();
                 Poolable poolable = inst.gameObject.GetComponent<Poolable>();
+
+                if (dontSaveIds.Contains(poolable.prefabIndex)) {
+                    continue;
+                }
+
+                InstanceData data = new InstanceData();
                 data.prefabIndex = poolable.prefabIndex;
                 data.poolId = poolable.poolId;
                 data.poolState = poolable.SaveState();

@@ -9,10 +9,12 @@ public class PoolerEditor : Editor
 {
     private ReorderableList list;
     private SerializedProperty minPoolIdsProp;
+    private SerializedProperty dontSaveProp;
 
     private void OnEnable()
     {
         minPoolIdsProp = serializedObject.FindProperty("minPooledIds");
+        dontSaveProp = serializedObject.FindProperty("dontSaveSet");
         list =
             new ReorderableList(serializedObject, serializedObject.FindProperty("poolablePrefabs"),
                                 true, true, true, true);
@@ -30,6 +32,7 @@ public class PoolerEditor : Editor
         serializedObject.Update();
         EditorGUILayout.PropertyField(minPoolIdsProp);
         list.DoLayoutList();
+        EditorGUILayout.PropertyField(dontSaveProp, true);
         serializedObject.ApplyModifiedProperties();
     }
 }
