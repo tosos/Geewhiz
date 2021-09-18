@@ -36,7 +36,7 @@ public class OVRInputDispatch : MonoBehaviour
                 Dispatcher.instance.Dispatch("ButtonUntouched" + button.touch.ToString(), "");
             }
             if (OVRInput.GetDown(button.button)) {
-                Debug.Log(Time.time + " ButtonDown" + button.button.ToString());
+                
                 Dispatcher.instance.Dispatch("ButtonDown" + button.button.ToString(), "");
             }
             if (OVRInput.GetUp(button.button)) {
