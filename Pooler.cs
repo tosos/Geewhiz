@@ -161,6 +161,21 @@ public class Pooler : MonoBehaviour
         return inst;
     }
 
+    public virtual void ReturnAll()
+    {
+        List<Transform> allofthem = new List<Transform>();
+        foreach (List<Transform> set in activeInstances) {
+            if (set == null) { continue; }
+            foreach (Transform inst in set) {
+                allofthem.Add(inst);
+            }
+        }
+
+        foreach (Transform inst in allofthem) {
+            DirectReturn(inst);
+        }
+    }
+
     public void ReturnToPool(Transform instance, float time = 0.0f)
     {
         // Debug.Log ("Receiving a ReturnToPool call for " + instance.gameObject.name, instance.gameObject);
@@ -214,7 +229,8 @@ public class Pooler : MonoBehaviour
         }
 
         if (poolIdToInstance.ContainsKey(id)) {
-            Debug.LogError ("Catastrophic id error, repeated poolid " + id + ". Attempting to correct, good luck");
+            Transform current = FindInstance(id);
+            Debug.LogError ("Catastrophic id error, repeated poolid " + id + " with index " + index + ". The current object with that id is " + (current != null ? current.gameObject.name : "null") + ". Attempting to correct, good luck", (current != null ? current.gameObject : null));
             while (poolIdToInstance.ContainsKey(id)) {
                 id ++;
             }
@@ -263,7 +279,11 @@ public class Pooler : MonoBehaviour
     protected virtual IEnumerator DelayedReturn(Transform instance)
     {
         yield return null;
+        DirectReturn(instance);
+    }
 
+    protected virtual void DirectReturn(Transform instance)
+    {
 #if CLICKS_USES_PUN
         var view = instance.GetComponent<PhotonView>();
         if (view != null) {
