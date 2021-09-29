@@ -26,7 +26,7 @@ public class Visuals : MonoBehaviour
             GameObject prefab = resourceCache[visualAssets[i]];
             GameObject inst = (GameObject) Instantiate(prefab, Vector3.zero, Quaternion.identity);
             inst.name = prefab.name;
-            inst.transform.parent = transform;
+            inst.transform.SetParent(transform);
             inst.transform.localPosition = prefab.transform.position;
             inst.transform.localRotation = prefab.transform.rotation;
             inst.transform.localScale = prefab.transform.localScale;
