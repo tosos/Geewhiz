@@ -12,7 +12,7 @@ public class Pooler : MonoBehaviour
     public delegate void OnPoolInstantiated(Transform instance);
     public event OnPoolInstantiated onPoolInstantiated;
 
-    public Transform[] poolablePrefabs;
+    public List<Transform> poolablePrefabs;
     protected Queue<Transform>[] pooledInstances;
     protected List<Transform>[] activeInstances;
     protected Dictionary<int, Transform>poolIdToInstance;
@@ -65,9 +65,9 @@ public class Pooler : MonoBehaviour
         if (_instance != null) { Debug.LogError("Instance should be null"); }
         _instance = this;
 
-        pooledInstances = new Queue<Transform>[ poolablePrefabs.Length ];
+        pooledInstances = new Queue<Transform>[ poolablePrefabs.Count ];
         // TODO allow pre-warming the instances
-        activeInstances = new List<Transform>[ poolablePrefabs.Length ];
+        activeInstances = new List<Transform>[ poolablePrefabs.Count ];
         poolIdToInstance = new Dictionary<int, Transform>();
 
         // callbacks = new List<NetworkInstantiateDelegate> ();
@@ -203,7 +203,7 @@ public class Pooler : MonoBehaviour
 
     protected int PrefabIndex(Transform prefab)
     {
-        for (int i = 0; i < poolablePrefabs.Length; i++) {
+        for (int i = 0; i < poolablePrefabs.Count; i++) {
             if (prefab == poolablePrefabs[i]) { return i; }
         }
         return -1;
@@ -214,10 +214,12 @@ public class Pooler : MonoBehaviour
     {
         Transform inst;
         if (pooledInstances[index] == null) { pooledInstances[index] = new Queue<Transform>(); }
+        if (activeInstances[index] == null) { activeInstances[index] = new List<Transform>(); }
         Poolable poolable = null;
         if (pooledInstances[index].Count == 0) {
             inst =
                 (Transform) Instantiate(poolablePrefabs[index], Vector3.zero, Quaternion.identity);
+            inst.gameObject.name = poolablePrefabs[index].name + "-" + id + "-" + activeInstances[index].Count;
             poolable = inst.GetComponent<Poolable>();
             if (poolable == null) { poolable = inst.gameObject.AddComponent<Poolable>(); }
             poolable.prefabIndex = index;
@@ -240,7 +242,6 @@ public class Pooler : MonoBehaviour
         poolable.poolId = id;
         poolIdToInstance[id] = inst;
 
-        if (activeInstances[index] == null) { activeInstances[index] = new List<Transform>(); }
         activeInstances[index].Add(inst);
 
         inst.parent = parent;
