@@ -7,19 +7,31 @@ public class Visuals : MonoBehaviour
     // public RuntimeAnimatorController controller;
     // public Avatar avatar;
     public string[] visualAssets;
-    static private Dictionary<string, GameObject>resourceCache;
-    private List<GameObject>visualInsts;
+    [Header("If checked, Selects a random one from the visual set")]
+    public bool selectRandom;
+    static private Dictionary<string, GameObject> resourceCache;
+    private List<GameObject> visualInsts;
     private bool visualsLoaded = false;
 
     public void LoadVisuals()
     {
-        if (visualsLoaded) { return; }
+        if (visualsLoaded) {
+            return;
+        }
 
-        if (resourceCache == null) { resourceCache = new Dictionary<string, GameObject>(); }
+        if (resourceCache == null) {
+            resourceCache = new Dictionary<string, GameObject>();
+        }
 
         visualInsts = new List<GameObject>();
 
+        int selection = Random.Range(0, visualAssets.Length);
+
         for (int i = 0; i < visualAssets.Length; i++) {
+            if (selectRandom && i != selection) {
+                continue;
+            }
+            
             if (!resourceCache.ContainsKey(visualAssets[i])) {
                 resourceCache[visualAssets[i]] = (GameObject) Resources.Load(visualAssets[i]);
             }
@@ -38,14 +50,13 @@ public class Visuals : MonoBehaviour
 
     public void EnableVisuals()
     {
-        
         for (int i = 0; i < visualInsts.Count; i++) {
             visualInsts[i].SetActive(true);
         }
     }
+    
     public void DisableVisuals()
     {
-        
         for (int i = 0; i < visualInsts.Count; i++) {
             visualInsts[i].SetActive(false);
         }
