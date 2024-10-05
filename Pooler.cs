@@ -100,6 +100,12 @@ public class Pooler : MonoBehaviour
                                    parent);
     }
 
+    public virtual Transform InstantiateFromPool(Transform prefab, Transform parent)
+    {
+        return InstantiateFromPool(prefab, prefab.gameObject.tag, 
+            prefab.gameObject.layer, prefab.position, prefab.rotation, parent);
+    }
+
     public virtual Transform InstantiateFromPool(Transform prefab, string tag, int layer,
                                                  Vector3 pos = default(Vector3),
                                                  Quaternion rot = default(Quaternion),

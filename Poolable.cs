@@ -8,6 +8,8 @@ public class Poolable : MonoBehaviour
     private bool needsStart = true;
     private bool needsRestore = false;
 
+    private bool isQuitting = false;
+
     [System.Serializable]
     public class StatePair {
         public string id;
@@ -27,8 +29,10 @@ public class Poolable : MonoBehaviour
 
 	protected void OnDestroy()
 	{
-		Debug.LogWarning("Destroy shouldn't be called on Poolable in most cases");
-	}
+        if (!isQuitting) {
+            Debug.LogWarning("Destroy shouldn't be called on Poolable in most cases");
+        }
+    }
 
     // Need to update in either fixed or update depending on which is going to run first (unknown apriori)
     private void FixedUpdate()
@@ -38,7 +42,10 @@ public class Poolable : MonoBehaviour
 
     private void ProcessStartupIfNeeded()
     {
-        if (needsStart) {
+        if (needsStart)
+        {
+            Application.wantsToQuit += () => isQuitting = true;
+            
             SendMessage("PoolStart", SendMessageOptions.DontRequireReceiver);
             needsStart = false;
             enabled = false;
