@@ -17,7 +17,7 @@ public class Pooler : MonoBehaviour
     protected List<Transform>[] activeInstances;
     protected Dictionary<int, Transform>poolIdToInstance;
     public int minPooledIds = 5;
-    public bool[] dontSaveSet;
+    public List<Transform> dontSaveSet;
 
     protected int nextPoolId = 1;
 
@@ -330,19 +330,22 @@ public class Pooler : MonoBehaviour
         public Quaternion rotation;
         public string poolState;
     };
+    
+    protected bool DontSave(int prefabIndex) 
+    {
+        return dontSaveSet.Contains(poolablePrefabs[prefabIndex]);
+    }
 
     public virtual string SaveState()
     {
         List<InstanceData> storeInstances = new List<InstanceData>();
         for (int index = 0; index < activeInstances.Length; index++) {
             for (int i = 0; i < activeInstances[index].Count; i++) {
-                Transform inst = activeInstances[index][i];
-                Poolable poolable = inst.gameObject.GetComponent<Poolable>();
-
-                if (dontSaveSet[poolable.prefabIndex]) {
+                if (DontSave(index)) {
                     continue;
                 }
-
+                Transform inst = activeInstances[index][i];
+                Poolable poolable = inst.gameObject.GetComponent<Poolable>();
                 InstanceData data = new InstanceData();
                 data.prefabIndex = poolable.prefabIndex;
                 data.poolId = poolable.poolId;
