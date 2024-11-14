@@ -237,8 +237,11 @@ public class Pooler : MonoBehaviour
         }
 
         if (poolIdToInstance.ContainsKey(id)) {
-            Transform current = FindInstance(id);
-            Debug.LogError ("Catastrophic id error, repeated poolid " + id + " with index " + index + ". The current object with that id is " + (current != null ? current.gameObject.name : "null") + ". Attempting to correct, good luck", (current != null ? current.gameObject : null));
+            GameObject current = FindInstance(id)?.gameObject;
+            Debug.LogError ("Catastrophic id error, repeated poolid " + id + " with index " + index + ".\n" +
+                            "The current object with that id is " + current + ".\n" +
+                            "New instance is " + inst.gameObject.name + "\n." +
+                            "Attempting to correct, good luck", current);
             while (poolIdToInstance.ContainsKey(id)) {
                 id ++;
             }
@@ -328,6 +331,7 @@ public class Pooler : MonoBehaviour
         public int layer;
         public Vector3 position;
         public Quaternion rotation;
+        public int parentPoolId;
         public string poolState;
     };
     
@@ -338,17 +342,26 @@ public class Pooler : MonoBehaviour
 
     public virtual string SaveState()
     {
-        List<InstanceData> storeInstances = new List<InstanceData>();
+        var storeInstances = new List<InstanceData>();
         for (int index = 0; index < activeInstances.Length; index++) {
             for (int i = 0; i < activeInstances[index].Count; i++) {
                 if (DontSave(index)) {
                     continue;
                 }
-                Transform inst = activeInstances[index][i];
-                Poolable poolable = inst.gameObject.GetComponent<Poolable>();
-                InstanceData data = new InstanceData();
+                var inst = activeInstances[index][i];
+                var poolable = inst.gameObject.GetComponent<Poolable>();
+                var data = new InstanceData();
                 data.prefabIndex = poolable.prefabIndex;
                 data.poolId = poolable.poolId;
+                data.parentPoolId = -1;
+                // TODO ensure the child is stored after the parent in the list
+                // or handle it in the load by delaying children load states
+                if (inst.parent != null) {
+                    var parentPoolable = inst.parent.gameObject.GetComponent<Poolable>();
+                    if (parentPoolable != null) {
+                        data.parentPoolId = parentPoolable.poolId;
+                    }
+                }
                 data.poolState = poolable.SaveState();
                 data.tag = inst.gameObject.tag;
                 data.layer = inst.gameObject.layer;
@@ -365,17 +378,19 @@ public class Pooler : MonoBehaviour
         if (nextPoolId > 1) {
             Debug.LogError ("Constructed some assets before loading, that's a problem");
         }
-        List<InstanceData>storeInstances = JsonUtility.FromJson<List<InstanceData>>(state);
+        var storeInstances = JsonUtility.FromJson<List<InstanceData>>(state);
         isRestoringState = true;
         for (int i = 0; i < storeInstances.Count; i++) {
-            InstanceData data = storeInstances[i];
-            Transform inst = InstantiateInternal(data.prefabIndex, data.poolId, data.tag,
-                                                 data.layer, data.position, data.rotation);
+            var data = storeInstances[i];
+            var parent = data.parentPoolId >= 0 ? FindInstance(data.parentPoolId) : null;
+            var inst = InstantiateInternal(data.prefabIndex, data.poolId, data.tag,
+                                                 data.layer, data.position, data.rotation, parent);
             inst.gameObject.GetComponent<Poolable>().LoadState(data.poolState);
-            if (nextPoolId < data.poolId) {
+            if (nextPoolId <= data.poolId) {
                 nextPoolId = data.poolId + 1;
             }
         }
+        Debug.Log("Pooler is done restoring state");
         isRestoringState = false;
     }
 }

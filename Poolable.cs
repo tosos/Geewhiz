@@ -29,7 +29,7 @@ public class Poolable : MonoBehaviour
 
 	protected void OnDestroy()
 	{
-        if (!isQuitting) {
+        if (!isQuitting && Application.isPlaying) {
             Debug.LogWarning("Destroy shouldn't be called on Poolable in most cases");
         }
     }
