@@ -53,19 +53,23 @@ public class Dispatcher : MonoBehaviour {
             if (!parallelRecv.ContainsKey(message)) {
                 parallelRecv.Add(message, new List<GameObject>());
             }
-            if (!parallelRecv[message].Contains(obj)) { parallelRecv[message].Add(obj); }
+            if (!parallelRecv[message].Contains(obj)) {
+                parallelRecv[message].Add(obj);
+            }
         } else {
             if (!serialRecv.ContainsKey(message)) {
                 serialRecv.Add(message, new List<GameObject>());
             }
-            if (!serialRecv[message].Contains(obj)) { serialRecv[message].Insert(0, obj); }
+            serialRecv[message].Insert(0, obj);
             UpdateDebug();
         }
     }
 
     public void Unregister(string message, GameObject obj)
     {
-        if (parallelRecv.ContainsKey(message)) { parallelRecv[message].Remove(obj); }
+        if (parallelRecv.ContainsKey(message)) {
+            parallelRecv[message].Remove(obj);
+        }
         if (serialRecv.ContainsKey(message)) {
             serialRecv[message].Remove(obj);
             UpdateDebug();
@@ -75,22 +79,15 @@ public class Dispatcher : MonoBehaviour {
     public void Dispatch(string message, object parameter = null)
     {
         if (serialRecv.ContainsKey(message) && serialRecv[message].Count > 0) {
-            if (serialRecv [message]
-                    [0] != null &&
-                serialRecv [message]
-                [0]
-                    .activeSelf) {
-                serialRecv [message]
-                [0]
-                    .SendMessage(message, parameter);
+            if (serialRecv[message][0] != null && serialRecv[message][0].activeSelf) {
+                serialRecv [message][0].SendMessage(message, parameter);
             } else {
                 serialRecv[message].RemoveAt(0);
             }
         }
 
         if (parallelRecv.ContainsKey(message)) {
-            foreach(GameObject go in parallelRecv[message])
-            {
+            foreach(GameObject go in parallelRecv[message]) {
                 if (go != null) { go.SendMessage(message, parameter); }
             }
         }
