@@ -187,8 +187,9 @@ public class Pooler : MonoBehaviour
         // Debug.Log ("Receiving a ReturnToPool call for " + instance.gameObject.name, instance.gameObject);
         if (time > 0) {
             StartCoroutine(TimedReturn(instance, time));
-        } else {
-            StartCoroutine(DelayedReturn(instance));
+        } else { 
+            // TODO Nathan, why was this here? StartCoroutine(DelayedReturn(instance));
+            DirectReturn(instance);
         }
     }
 
@@ -274,7 +275,8 @@ public class Pooler : MonoBehaviour
     IEnumerator TimedReturn(Transform instance, float time)
     {
         yield return new WaitForSeconds(time);
-        StartCoroutine(DelayedReturn(instance));
+        // TODO Nathan, why was this here? StartCoroutine(DelayedReturn(instance));
+        DirectReturn(instance);
     }
     protected virtual void UnspawnPoolable(GameObject go)
     {
