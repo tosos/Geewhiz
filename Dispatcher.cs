@@ -80,7 +80,7 @@ public class Dispatcher : MonoBehaviour {
     {
         if (serialRecv.ContainsKey(message) && serialRecv[message].Count > 0) {
             if (serialRecv[message][0] != null && serialRecv[message][0].activeSelf) {
-                serialRecv [message][0].SendMessage(message, parameter);
+                serialRecv[message][0].SendMessage(message, parameter);
             } else {
                 serialRecv[message].RemoveAt(0);
             }
