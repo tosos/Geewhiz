@@ -5,6 +5,8 @@ using System.Collections.Generic;
 
 // Raises "ButtonDown<Action>" and "ButtonUp<Action>" through the Dispatcher for every
 // Button action in the enabled maps. Pointer presses over UI are dropped.
+// Runs early so polls of WasPressed and WasReleased in the same frame see the edges.
+[DefaultExecutionOrder(-100)]
 public class ActionDispatch : MonoBehaviour
 {
     public InputActionAsset actions;
@@ -25,6 +27,10 @@ public class ActionDispatch : MonoBehaviour
     // A release only goes out when its press did, for every action, so receivers never
     // see an orphan ButtonUp after a press that was dropped over UI.
     private HashSet<InputAction> raisedDown = new HashSet<InputAction>();
+    // IsPressed as of the last Update, to see presses that landed in another input update.
+    private HashSet<InputAction> isDown = new HashSet<InputAction>();
+    private HashSet<InputAction> pressedThisFrame = new HashSet<InputAction>();
+    private HashSet<InputAction> releasedThisFrame = new HashSet<InputAction>();
 
     public Vector2 PointerPosition => Read<Vector2>(pointAction);
 
@@ -69,6 +75,9 @@ public class ActionDispatch : MonoBehaviour
     {
         foreach (var mapName in mapNames) { actions.FindActionMap(mapName, true).Disable(); }
         raisedDown.Clear();
+        isDown.Clear();
+        pressedThisFrame.Clear();
+        releasedThisFrame.Clear();
     }
 
     public T Read<T>(string name) where T : struct
@@ -81,9 +90,18 @@ public class ActionDispatch : MonoBehaviour
         return actions.FindAction(name, true).IsPressed();
     }
 
-    public bool WasPressed(string name) { return false; }
+    // True for the frame in which ButtonDown was raised for the action. Pointer presses
+    // dropped over UI do not count.
+    public bool WasPressed(string name)
+    {
+        return pressedThisFrame.Contains(actions.FindAction(name, true));
+    }
 
-    public bool WasReleased(string name) { return false; }
+    // True for the frame in which ButtonUp was raised for the action.
+    public bool WasReleased(string name)
+    {
+        return releasedThisFrame.Contains(actions.FindAction(name, true));
+    }
 
     // Uses the bound controls, not activeControl, which is null when a press and its
     // release land in one frame.
@@ -97,16 +115,28 @@ public class ActionDispatch : MonoBehaviour
 
     // Presses are read here, not in action callbacks, because
     // IsPointerOverGameObject misreports inside a callback.
+    // Edges are the change in IsPressed since the last Update, plus the
+    // WasPressedThisFrame/WasReleasedThisFrame edges, which catch a press and release
+    // inside one frame. The change catches events processed in another input update.
     void Update()
     {
+        pressedThisFrame.Clear();
+        releasedThisFrame.Clear();
         var overUI = PointerOverUI;
         foreach (var action in buttons) {
-            if (action.WasPressedThisFrame()) {
-                if (overUI && IsPointerAction(action)) { continue; }
-                raisedDown.Add(action);
-                dispatcher.Dispatch("ButtonDown" + action.name);
+            var pressed = action.IsPressed();
+            var wasDown = isDown.Contains(action);
+            if (pressed) { isDown.Add(action); } else { isDown.Remove(action); }
+
+            if ((pressed && !wasDown) || action.WasPressedThisFrame()) {
+                if (!(overUI && IsPointerAction(action))) {
+                    raisedDown.Add(action);
+                    pressedThisFrame.Add(action);
+                    dispatcher.Dispatch("ButtonDown" + action.name);
+                }
             }
-            if (action.WasReleasedThisFrame() && raisedDown.Remove(action)) {
+            if (((!pressed && wasDown) || action.WasReleasedThisFrame()) && raisedDown.Remove(action)) {
+                releasedThisFrame.Add(action);
                 dispatcher.Dispatch("ButtonUp" + action.name);
             }
         }
