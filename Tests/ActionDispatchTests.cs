@@ -108,17 +108,7 @@ public class ActionDispatchTests : InputTestFixture
     [UnityTest]
     public IEnumerator PointerPressOverUIRaisesNothing()
     {
-        var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
-        spawned.Add(eventSystem);
-        var canvasObject = new GameObject("Canvas", typeof(Canvas), typeof(GraphicRaycaster));
-        spawned.Add(canvasObject);
-        canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-        var panel = new GameObject("Panel", typeof(Image));
-        panel.transform.SetParent(canvasObject.transform, false);
-        var rect = (RectTransform) panel.transform;
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = rect.offsetMax = Vector2.zero;
+        BuildFullScreenPanel();
 
         Spawn("a", true);
         Set(mouse.position, new Vector2(10, 10));
@@ -135,6 +125,39 @@ public class ActionDispatchTests : InputTestFixture
     }
 
     [UnityTest]
+    public IEnumerator PointerPressAndReleaseInOneFrameOverUIRaisesNothing()
+    {
+        BuildFullScreenPanel();
+
+        Spawn("a", true);
+        Set(mouse.position, new Vector2(10, 10));
+        yield return null;
+        yield return null;
+        Assert.IsTrue(actionDispatch.PointerOverUI, "Setup: panel should cover the pointer");
+
+        Press(mouse.leftButton);
+        Release(mouse.leftButton);
+        yield return null;
+
+        CollectionAssert.IsEmpty(log);
+    }
+
+    private void BuildFullScreenPanel()
+    {
+        var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+        spawned.Add(eventSystem);
+        var canvasObject = new GameObject("Canvas", typeof(Canvas), typeof(GraphicRaycaster));
+        spawned.Add(canvasObject);
+        canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+        var panel = new GameObject("Panel", typeof(Image));
+        panel.transform.SetParent(canvasObject.transform, false);
+        var rect = (RectTransform) panel.transform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = rect.offsetMax = Vector2.zero;
+    }
+
+    [UnityTest]
     public IEnumerator PointerPressOffUIRaisesSelect()
     {
         Spawn("a", true);
@@ -147,6 +170,34 @@ public class ActionDispatchTests : InputTestFixture
         yield return null;
 
         CollectionAssert.AreEqual(new[] { "a:DownSelect", "a:UpSelect" }, log);
+    }
+
+    [UnityTest]
+    public IEnumerator PointerPressAndReleaseInOneFrameRaisesBoth()
+    {
+        Spawn("a", true);
+        Set(mouse.position, new Vector2(10, 10));
+        yield return null;
+
+        // A fast click in a slow frame: the action is back to Waiting when Update runs.
+        Press(mouse.leftButton);
+        Release(mouse.leftButton);
+        yield return null;
+
+        CollectionAssert.AreEqual(new[] { "a:DownSelect", "a:UpSelect" }, log);
+    }
+
+    [UnityTest]
+    public IEnumerator KeyPressAndReleaseInOneFrameRaisesBoth()
+    {
+        Spawn("a", true);
+        yield return null;
+
+        Press(keyboard.escapeKey);
+        Release(keyboard.escapeKey);
+        yield return null;
+
+        CollectionAssert.AreEqual(new[] { "a:DownCancel", "a:UpCancel" }, log);
     }
 
     [UnityTest]

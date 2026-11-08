@@ -22,8 +22,8 @@ public class ActionDispatch : MonoBehaviour
 
     private Dispatcher dispatcher;
     private InputAction[] buttons;
-    // A pointer release only goes out when its press did, so receivers never see an
-    // orphan ButtonUp after a press that started over UI.
+    // A release only goes out when its press did, for every action, so receivers never
+    // see an orphan ButtonUp after a press that was dropped over UI.
     private HashSet<InputAction> raisedDown = new HashSet<InputAction>();
 
     public Vector2 PointerPosition => Read<Vector2>(pointAction);
@@ -81,6 +81,16 @@ public class ActionDispatch : MonoBehaviour
         return actions.FindAction(name, true).IsPressed();
     }
 
+    // Uses the bound controls, not activeControl, which is null when a press and its
+    // release land in one frame.
+    private bool IsPointerAction(InputAction action)
+    {
+        foreach (var control in action.controls) {
+            if (control.device is Pointer) { return true; }
+        }
+        return false;
+    }
+
     // Presses are read here, not in action callbacks, because
     // IsPointerOverGameObject misreports inside a callback.
     void Update()
@@ -88,7 +98,7 @@ public class ActionDispatch : MonoBehaviour
         var overUI = PointerOverUI;
         foreach (var action in buttons) {
             if (action.WasPressedThisFrame()) {
-                if (overUI && action.activeControl.device is Pointer) { continue; }
+                if (overUI && IsPointerAction(action)) { continue; }
                 raisedDown.Add(action);
                 dispatcher.Dispatch("ButtonDown" + action.name);
             }
