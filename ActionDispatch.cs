@@ -81,6 +81,10 @@ public class ActionDispatch : MonoBehaviour
         return actions.FindAction(name, true).IsPressed();
     }
 
+    public bool WasPressed(string name) { return false; }
+
+    public bool WasReleased(string name) { return false; }
+
     // Uses the bound controls, not activeControl, which is null when a press and its
     // release land in one frame.
     private bool IsPointerAction(InputAction action)

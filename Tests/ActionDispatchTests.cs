@@ -201,6 +201,79 @@ public class ActionDispatchTests : InputTestFixture
     }
 
     [UnityTest]
+    public IEnumerator PressProcessedInSeparateInputUpdateRaisesDownAndUpOnce()
+    {
+        Spawn("a", true);
+        yield return null;
+
+        // simulate_key and manual updates process events outside the frame's own update,
+        // so WasPressedThisFrame is already false when ActionDispatch.Update runs.
+        Press(keyboard.escapeKey);
+        InputSystem.Update();
+        yield return null;
+        CollectionAssert.AreEqual(new[] { "a:DownCancel" }, log);
+
+        yield return null;
+        CollectionAssert.AreEqual(new[] { "a:DownCancel" }, log, "Held key must not repeat Down");
+
+        Release(keyboard.escapeKey);
+        InputSystem.Update();
+        yield return null;
+        CollectionAssert.AreEqual(new[] { "a:DownCancel", "a:UpCancel" }, log);
+    }
+
+    [UnityTest]
+    public IEnumerator WasPressedAndWasReleasedFollowTheSameEdges()
+    {
+        yield return null;
+        Assert.IsFalse(actionDispatch.WasPressed("Cancel"));
+
+        Press(keyboard.escapeKey);
+        InputSystem.Update();
+        yield return null;
+        Assert.IsTrue(actionDispatch.WasPressed("Cancel"));
+        Assert.IsFalse(actionDispatch.WasReleased("Cancel"));
+
+        yield return null;
+        Assert.IsFalse(actionDispatch.WasPressed("Cancel"), "Edge lasts one frame");
+
+        Release(keyboard.escapeKey);
+        InputSystem.Update();
+        yield return null;
+        Assert.IsTrue(actionDispatch.WasReleased("Cancel"));
+        Assert.IsFalse(actionDispatch.WasPressed("Cancel"));
+
+        // Inside one frame both edges count.
+        yield return null;
+        Press(keyboard.escapeKey);
+        Release(keyboard.escapeKey);
+        yield return null;
+        Assert.IsTrue(actionDispatch.WasPressed("Cancel"));
+        Assert.IsTrue(actionDispatch.WasReleased("Cancel"));
+    }
+
+    [UnityTest]
+    public IEnumerator PointerPressOverUIIsNotWasPressed()
+    {
+        BuildFullScreenPanel();
+
+        Set(mouse.position, new Vector2(10, 10));
+        yield return null;
+        yield return null;
+        Assert.IsTrue(actionDispatch.PointerOverUI, "Setup: panel should cover the pointer");
+
+        Press(mouse.leftButton);
+        InputSystem.Update();
+        yield return null;
+        Assert.IsFalse(actionDispatch.WasPressed("Select"));
+
+        Release(mouse.leftButton);
+        InputSystem.Update();
+        yield return null;
+        Assert.IsFalse(actionDispatch.WasReleased("Select"));
+    }
+
+    [UnityTest]
     public IEnumerator ReadVector2AndIsPressedFollowDeviceState()
     {
         yield return null;
